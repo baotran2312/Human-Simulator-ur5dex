@@ -86,14 +86,15 @@ class IsaacSimGUIVisualizer:
         # Physics Scene
         physics_scene = UsdPhysics.Scene.Define(self.stage, Sdf.Path("/World/PhysicsScene"))
 
-        # Ground Plane
+        # Ground Plane with Physical Collision
+        plane_prim = self.stage.DefinePrim("/World/GroundPlane", "Plane")
+        UsdPhysics.CollisionAPI.Apply(plane_prim)
         omni.kit.commands.execute("CreateMeshPrimWithDefaultXform", prim_type="Plane")
 
         # Load Robot Asset
         if os.path.exists(self.usd_path):
             robot_prim = self.stage.DefinePrim(UR5DEXConfig.robot_prim_path, "Xform")
             robot_prim.GetReferences().AddReference(self.usd_path)
-            UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
             self._enable_robot_collisions(robot_prim)
             print(f"[GUIVisualizer] Loaded robot USD and enabled link physics collisions: {self.usd_path}")
 
@@ -171,8 +172,8 @@ class IsaacSimGUIVisualizer:
                 drive_api.GetStiffnessAttr().Set(1e4)
                 drive_api.GetDampingAttr().Set(1e2)
 
-    def launch_ball(self, pos=[1.2, 0.0, 0.8], vel=[-1.5, 0.0, 0.3]):
-        """Launches dynamic ball."""
+    def launch_ball(self, pos=[0.85, 0.0, 0.68], vel=[-1.1, 0.0, 0.15]):
+        """Launches dynamic ball along parabolic trajectory towards palm workspace."""
         ball_prim = self.stage.GetPrimAtPath(self.ball_prim_path)
         if not ball_prim.IsValid():
             return
@@ -253,13 +254,15 @@ def main():
         if step_cnt % 60 == 0:
             print(f"[Step {step_cnt:04d} | Throw #{throw_cnt}] Ball Pos: ({pos_ball[0]:.2f}, {pos_ball[1]:.2f}, {pos_ball[2]:.2f}) | Intercept P_int: ({p_int[0]:.2f}, {p_int[1]:.2f}, {p_int[2]:.2f}) | Hand: {hand_state}")
 
-        # Continuous automatic ball re-throw loop every 240 frames
-        if step_cnt % 240 == 0:
+        # Re-throw ball when it falls below workspace or every 180 frames (3s)
+        if pos_ball[2] < 0.15 or step_cnt % 180 == 0:
             throw_cnt += 1
-            vx = -1.5 + np.random.uniform(-0.25, 0.25)
-            vy = np.random.uniform(-0.15, 0.15)
-            vz = 0.35 + np.random.uniform(-0.1, 0.2)
-            viz.launch_ball(vel=[vx, vy, vz])
+            pos_x = 0.75 + np.random.uniform(-0.05, 0.05)
+            pos_y = np.random.uniform(-0.1, 0.1)
+            vx = -1.1 + np.random.uniform(-0.15, 0.15)
+            vy = np.random.uniform(-0.08, 0.08)
+            vz = 0.15 + np.random.uniform(-0.05, 0.1)
+            viz.launch_ball(pos=[pos_x, pos_y, 0.65], vel=[vx, vy, vz])
 
     timeline.stop()
     simulation_app.close()

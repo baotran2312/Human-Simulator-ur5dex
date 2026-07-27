@@ -114,25 +114,27 @@ class EKFBallTracker:
         self.x = self.x + K @ y
         self.P = (np.eye(6) - K @ self.H) @ self.P
 
-    def predict_intercept_point(self, workspace_z: float = 0.6, max_horizon: float = 2.0) -> Tuple[np.ndarray, float]:
+    def predict_intercept_point(self, workspace_z: float = 0.55, max_horizon: float = 2.0) -> Tuple[np.ndarray, float]:
         """
-        Projects future ball motion to find intersection with hand workspace height (z = workspace_z).
-        
-        Returns:
-            P_int: (3,) numpy array [x_int, y_int, z_int]
-            t_catch: estimated time in seconds until arrival
+        Projects future ball motion to find intersection with hand workspace.
+        Clamps intercept point to valid UR5 physical reach workspace.
         """
         sim_x = self.x.copy()
         t = 0.0
         dt_sim = 0.005  # Fine simulation step
 
-        while t < max_horizon:
-            pos = sim_x[0:3]
-            vel = sim_x[3:6]
+        best_p_int = None
+        best_t = 0.0
 
-            # Check if ball has descended to target workspace height
-            if pos[2] <= workspace_z or vel[2] < -10.0:
-                return pos.copy(), t
+        while t < max_horizon:
+            pos = sim_x[0:3].copy()
+            vel = sim_x[3:6].copy()
+
+            # Find step where ball crosses target workspace z height
+            if pos[2] <= workspace_z:
+                best_p_int = pos
+                best_t = t
+                break
 
             a_drag = self._drag_accel(vel)
             accel = self.g + a_drag
@@ -141,7 +143,15 @@ class EKFBallTracker:
             sim_x[3:6] += accel * dt_sim
             t += dt_sim
 
-        return sim_x[0:3].copy(), t
+        if best_p_int is None:
+            best_p_int = sim_x[0:3].copy()
+
+        # Clamp to valid UR5 physical reach workspace boundaries (meters relative to base)
+        clamped_x = float(np.clip(best_p_int[0], 0.25, 0.65))
+        clamped_y = float(np.clip(best_p_int[1], -0.35, 0.35))
+        clamped_z = float(np.clip(best_p_int[2], 0.35, 0.75))
+
+        return np.array([clamped_x, clamped_y, clamped_z]), best_t
 
 if __name__ == "__main__":
     # Test EKF Filter
