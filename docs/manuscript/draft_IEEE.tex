@@ -1,0 +1,55 @@
+\documentclass[journal]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{A Digital Twin-Driven Offline-to-Online Framework for Dynamic Dexterous Grasping with Synchronization and Latency Compensation}
+
+\author{Bao-Tran~Nguyen,~\IEEEmembership{Member,~IEEE}
+\thanks{This work was supported by the Laboratory of Advanced Robotics and Humanoid Simulation.}
+\thanks{B. T. Nguyen is with the Department of Robotics, Faculty of Engineering (e-mail: baotran2312@users.noreply.github.com).}}
+
+\maketitle
+
+\begin{abstract}
+Dynamic dexterous grasping, particularly catching high-speed flying objects with a multi-fingered robotic hand, remains a significant challenge due to the high-dimensional joint space, real-time trajectory prediction requirements, and the physics-reality gap. This paper proposes a digital twin-driven offline-to-online framework for dynamic dexterous catching using a UR5 robotic arm integrated with a 5-fingered DH Robotics hand. We establish a virtual twin environment in NVIDIA Isaac Sim using cuRobo for high-speed GPU-accelerated Inverse Kinematics (IK) and DexGraspNet for generating optimal dexterous grasping poses. The planned trajectories are synchronized from simulation to the physical hardware via low-latency communication channels using the Universal Robots Real-Time Data Exchange (RTDE) protocol and Modbus TCP. Real-world experiments demonstrate that our framework effectively compensates for system latency and achieves stable grasping under compliance control, showing high promise for dynamic humanoid manipulation applications.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Digital Twin, Sim-to-Real, Dexterous Grasping, Dynamic Catching, cuRobo, Isaac Sim.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\IEEEPARstart{R}{obotic} manipulation has transitioned rapidly from simple pick-and-place tasks using parallel jaw grippers to sophisticated multi-fingered dexterous interaction. Among these manipulation challenges, catching a flying object (e.g., a ball) in mid-air represents a pinnacle of real-time perception, fast motion planning, and soft-contact mechanics. Unlike static grasping, dynamic catching requires the robot to: 1) predict the 3D trajectory of the incoming object, 2) plan a collision-free macro-trajectory for the arm to reach the interception point, and 3) coordinate the micro-joints of the multi-fingered hand to enclose the object at the exact moment of impact to dissipate kinetic energy.
+
+To address these requirements, we propose a digital twin framework. The virtual twin in NVIDIA Isaac Sim runs physics-based simulations to generate valid catching trajectories. These trajectories are then executed by the physical UR5 arm and DH Robotics dexterous hand. By decoupling the online execution from complex simulation training (offline-to-online replay), we minimize real-world computation latency and ensure stable operational safety.
+
+The primary contributions of this paper are:
+\begin{itemize}
+    \item A hierarchical macro-micro control scheme that coordinates the UR5 arm (macro-manipulation) and the 5-fingered DH hand (micro-manipulation) for dynamic catching.
+    \item A digital twin synchronization pipeline utilizing cuRobo and RTDE that reduces Sim-to-Real tracking latency.
+    \item Experimental validation of three catching scenarios (static catching, dynamic catching, and physical playback) illustrating stable contact force profiles.
+\end{itemize}
+
+\section{Related Work}
+\subsection{Dexterous Grasping in Simulation and Reality}
+Generating stable grasping configurations for high-DoF hands has been extensively studied. Recent works like DexGraspNet \cite{dexgraspnet} utilize reinforcement learning and physics engines (such as NVIDIA Isaac Gym) to generate massive datasets of dexterous grasps. However, transferring these policies to real hardware (Sim-to-Real) remains difficult due to discrepancies in contact friction, motor backlash, and latency.
+
+\subsection{Dynamic Object Catching and Trajectory Prediction}
+Dynamic catching requires fast perception and control. Classical approaches rely on active vision tracking and Kalman filtering to predict the parabolic trajectory of a ball. When coupled with multi-fingered hands, compliance control is critical to absorb the impact. In this paper, we integrate a compliance model into the joint controllers of the DH Robotics hand to achieve soft-contact capturing.
+
+\subsection{Digital Twins in Robotics}
+Digital twins provide a bi-directional data flow between the virtual and physical spaces. Using middlewares like ROS 2 and lightweight communication brokers (WebSockets/TCP), contemporary systems synchronize simulated joint states with physical encoders. Our framework leverages these protocols to execute offline-optimized trajectories under safety bounds.
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{99}
+\bibitem{dexgraspnet}
+R. Ruicheng et al., ``DexGraspNet: A Large-Scale Robotic Dexterous Grasp Dataset in Simulation,'' *IEEE Transactions on Robotics*, 2023.
+\end{thebibliography}
+
+\end{document}
