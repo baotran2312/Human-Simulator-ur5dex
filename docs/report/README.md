@@ -87,3 +87,20 @@ graph TD
 1. **Biểu đồ sai số bám quỹ đạo (Trajectory Tracking Error)**: So sánh góc khớp thiết kế trong Isaac Sim và góc khớp phản hồi thực tế của UR5 và bàn tay thật qua các biểu đồ thời gian ($t$).
 2. **Đánh giá mức độ tiêu tán động năng (Energy Dissipation Rate)**: Chứng minh thuật toán điều khiển bàn tay khéo léo giúp giảm thiểu lực phản hồi cực đại (peak impact force), giúp bóng không bị nảy ra ngoài so với phương pháp lập trình góc khớp cứng nhắc (rule-based joint control).
 3. **Ma trận tỉ lệ thành công (Success Rate Matrix)**: Thử nghiệm với các tốc độ ném bóng khác nhau (từ $1 m/s$ đến $4 m/s$) và các quỹ đạo ném khác nhau để vẽ biểu đồ so sánh giới hạn hoạt động (operational workspace boundary) của hệ thống.
+
+---
+
+## IV. Tài Liệu Tham Khảo (References)
+
+Dưới đây là các tài liệu tham khảo cốt lõi từ cơ sở lý thuyết (Literature Review) được sử dụng để xây dựng cấu trúc nghiên cứu này:
+
+1. **Về Phương Pháp Tạo Dataset và Chuyển Đổi Sim-to-Real**:
+   * *A Review on Dataset Collection Strategies for Learning Methods in Robotic Manipulation.* (Nghiên cứu về các chiến lược thu thập dữ liệu trong mô phỏng để chuyển dịch sang thế giới thực mà không bị suy hao hiệu năng).
+2. **Về Bàn Tay Khéo Léo và Thuật Toán Catching/Grasping**:
+   * *An overview of learning-based dexterous grasping: recent advances and future directions.* (Cung cấp cơ sở lý thuyết về việc điều khiển bàn tay nhiều ngón, tối ưu hóa lực tiếp xúc mềm dẻo).
+   * *Towards a Unified Understanding of Robot Manipulation: A Comprehensive Survey.* (Tổng quan về các phương pháp lập kế hoạch quỹ đạo và tối ưu động học ngược IK).
+3. **Về Hệ Thống Nhận Diện và Dự Đoán Quỹ Đạo**:
+   * *A review on deep learning for vision-based hand detection, hand segmentation and hand gesture recognition in human–robot interaction.* (Các kỹ thuật tối ưu hóa xử lý ảnh camera để nhận diện vị trí và chuyển động vật thể thời gian thực).
+4. **Về Kiến Trúc Điều Khiển Cao Cấp và Tương Lai**:
+   * *Vision-Language-Action (VLA) Models for Robotics: A Review Towards Real-World Applications.* (Định hướng tích hợp các mô hình VLA như RT-2 để tối ưu hóa quyết định bắt bóng dựa trên ngữ cảnh).
+
