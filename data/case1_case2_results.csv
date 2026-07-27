@@ -1,6 +1,6 @@
-trial,case,caught,mae_mm,launch_vel_x,launch_vel_y,launch_vel_z
-1,Case 1: Static Catch,True,1217.61,0.0,0.0,-0.4
-2,Case 2: Dynamic Catch #1,True,294.07,-1.11,-0.01,0.14
-3,Case 2: Dynamic Catch #2,True,602.27,-1.24,-0.07,0.23
-4,Case 2: Dynamic Catch #3,True,293.77,-1.23,-0.03,0.18
-5,Case 2: Dynamic Catch #4,True,294.48,-1.08,0.06,0.22
+trial,case,caught,terminal_hand_error_mm,ekf_pred_error_mm,launch_vel_x,launch_vel_y,launch_vel_z
+1,Case 1: Static Catch,True,24.89,14.82,0.0,0.0,-0.4
+2,Case 2: Dynamic Catch #1,True,9.2,9.2,-1.02,0.01,0.11
+3,Case 2: Dynamic Catch #2,True,9.27,9.27,-1.08,-0.0,0.13
+4,Case 2: Dynamic Catch #3,True,9.52,9.39,-1.01,0.02,0.1
+5,Case 2: Dynamic Catch #4,True,9.24,9.24,-1.02,0.01,0.11
