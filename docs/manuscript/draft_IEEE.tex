@@ -48,6 +48,32 @@ Dynamic catching requires fast perception and control. Classical approaches rely
 \subsection{Digital Twins in Robotics}
 Digital twins provide a bi-directional data flow between the virtual and physical spaces. Using middlewares like ROS 2 and lightweight communication brokers (WebSockets/TCP), contemporary systems synchronize simulated joint states with physical encoders. Our framework leverages these protocols to execute offline-optimized trajectories under safety bounds.
 
+\section{Proposed Methodology}
+\subsection{Overall Framework Architecture}
+The proposed framework is structured in a hierarchical digital twin architecture consisting of three main blocks: 1) Perception and Trajectory Prediction, 2) Kinematic Planning (cuRobo), and 3) Physical Execution. In the virtual space (NVIDIA Isaac Sim), the camera model captures the flying object coordinates and transmits them to the prediction module. The planned trajectory is then streamed to the physical robot controllers (UR5 and DH Hand) via RTDE and Modbus TCP.
+
+\subsection{3D Ball Trajectory Prediction}
+To calculate the interception point, the flight of the incoming ball is modeled by a non-linear differential equation incorporating gravity and aerodynamic drag:
+\begin{equation}
+\ddot{\mathbf{x}}(t) = -\frac{1}{2m} \rho C_d A \|\dot{\mathbf{x}}(t)\| \dot{\mathbf{x}}(t) + \mathbf{g}
+\end{equation}
+where $\mathbf{x}(t) \in \mathbb{R}^3$ represents the 3D position of the ball, $m = 0.15\,\text{kg}$ is the mass, $\rho = 1.225\,\text{kg/m}^3$ is the air density, $C_d = 0.47$ is the drag coefficient of a sphere, $A$ is the cross-sectional area, and $\mathbf{g} = [0, 0, -9.81]^T\,\text{m/s}^2$ is the gravity vector. An Extended Kalman Filter (EKF) is implemented online to continuously estimate the state vector $\mathbf{s}_k = [\mathbf{x}_k, \dot{\mathbf{x}}_k]^T$ using virtual camera observations, outputting the predicted interception point $\mathbf{p}_{\text{int}}$ and arrival time $T_{\text{catch}}$.
+
+\subsection{GPU-Accelerated Arm Kinematics with cuRobo}
+Once the interception point $\mathbf{p}_{\text{int}}$ is identified, the joint configuration of the 6-DoF UR5 arm is solved using cuRobo, which provides parallelized Levenberg-Marquardt optimization on the GPU:
+\begin{equation}
+\mathbf{q}^* = \arg\min_{\mathbf{q}} \left( \|\mathbf{f}(\mathbf{q}) - \mathbf{p}_{\text{int}}\|^2 + \lambda \|\mathbf{q} - \mathbf{q}_0\|^2 + H(\mathbf{q}) \right)
+\end{equation}
+where $\mathbf{f}(\mathbf{q})$ is the forward kinematics, $\mathbf{q}_0$ is the current joint configuration, $\lambda$ is a damping factor, and $H(\mathbf{q})$ is the obstacle collision avoidance cost function. This optimization converges in $< 5\,\text{ms}$, allowing the arm to dynamic re-plan under sudden target changes.
+
+\subsection{Dexterous Grasping Compliance Control}
+To prevent the ball from bouncing off the palm upon contact, we implement a compliance control law for the joints of the 5-fingered DH hand. The motor torque $\tau_i$ for each finger joint is governed by:
+\begin{equation}
+\tau_i = K_p (q_{d,i} - q_i) + K_d (\dot{q}_{d,i} - \dot{q}_i) - F_{\text{compliance}}
+\end{equation}
+where $K_p$ and $K_d$ are the proportional and derivative gains, $q_{d,i}$ and $q_i$ are the target and current joint angles, and $F_{\text{compliance}}$ is the adaptive impedance force feedback estimated via the motor current signature. This ensures the fingers deform reactively upon contact, absorbing the impact energy.
+
+
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{99}
 \bibitem{dexgraspnet}
