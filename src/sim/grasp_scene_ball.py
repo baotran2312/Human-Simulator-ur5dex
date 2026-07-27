@@ -60,7 +60,8 @@ class UR5DEXPhysicalSimulation:
         
         # 1. Physics Scene
         physics_scene = UsdPhysics.Scene.Define(self.stage, Sdf.Path("/World/PhysicsScene"))
-        physics_scene.GetGravityAttr().Set(Gf.Vec3f(*self.phys_cfg.gravity))
+        physx_api = PhysxSchema.PhysxSceneAPI.Apply(physics_scene.GetPrim())
+        physx_api.CreateVectorToGroundAttr().Set(Gf.Vec3f(*self.phys_cfg.gravity))
 
         # 2. Ground Plane
         omni.kit.commands.execute("CreateMeshPrimWithDefaultXform", prim_type="Plane")
