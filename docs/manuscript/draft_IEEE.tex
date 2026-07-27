@@ -89,11 +89,38 @@ V(t) = \mathbf{e}^T(t) \mathbf{P} \mathbf{e}(t) + \int_{t-h(t)}^{t} \mathbf{e}^T
 Using the reciprocal convexity lemma, the stability condition $\dot{V}(t) < 0$ is formulated as a set of Linear Matrix Inequalities (LMIs), allowing the estimation of maximum allowable delay $h_m$ and control gains $\mathbf{K}_p, \mathbf{K}_d$.
 
 \subsection{Joint Impedance and Contact Compliance of Dexterous Hands}
-Upon contact with the high-speed ball, the joints of the multi-fingered DH hand must act compliantly to absorb impact energy and avoid rebound. The torque command $\boldsymbol{\tau}_j$ for each finger joint is governed by an active impedance law:
+Upon contact with the ball, the joints of the multi-fingered hand are modeled using an active impedance controller:
 \begin{equation}
 \boldsymbol{\tau}_j = \mathbf{K}_{\theta} (\boldsymbol{\theta}_d - \boldsymbol{\theta}) + \mathbf{D}_{\theta} (\dot{\boldsymbol{\theta}}_d - \dot{\boldsymbol{\theta}}) - \mathbf{J}_h^T \mathbf{f}_{\text{ext}}
 \end{equation}
 where $\boldsymbol{\theta}_d$ and $\boldsymbol{\theta}$ represent target and actual finger joint angles, $\mathbf{K}_{\theta}$ and $\mathbf{D}_{\theta}$ are virtual stiffness and damping matrices, $\mathbf{J}_h$ is the hand contact Jacobian, and $\mathbf{f}_{\text{ext}}$ is the contact force vector estimated via motor current measurements.
+
+\section{Proposed Framework and DRL-Based Compliance Adaptation}
+To achieve reliable mid-air catching without the object rebounding off the hand, we propose a hybrid control scheme. While the macro-motion of the UR5 arm is governed by cuRobo's deterministic planning and the delay-robust CLIK controller, the micro-impedance parameter matrix $\mathbf{K}_{\theta}(t)$ of the dexterous hand is dynamically modulated by a Deep Reinforcement Learning (DRL) agent.
+
+\subsection{DRL Formulation for Soft Grasping Adaptation}
+The active impedance modulation is formulated as a Markov Decision Process (MDP) defined by the tuple $\mathcal{M} = \langle \mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma \rangle$:
+\begin{enumerate}
+    \item \textbf{State Space} $\mathcal{S}$: At each time step $t$, the state vector $\mathbf{s}_t \in \mathcal{S}$ is defined as:
+    \begin{equation}
+    \mathbf{s}_t = \left[ \boldsymbol{\theta}(t), \dot{\boldsymbol{\theta}}(t), \mathbf{x}_{\text{ball}}(t), \dot{\mathbf{x}}_{\text{ball}}(t), \mathbf{f}_{\text{ext}}(t-1) \right]
+    \end{equation}
+    which captures finger joint angles, joint velocities, the ball's incoming state, and the history of contact forces.
+    \item \textbf{Action Space} $\mathcal{A}$: The action $\mathbf{a}_t \in \mathcal{A}$ corresponds to the continuous stiffness gain offsets:
+    \begin{equation}
+    \mathbf{a}_t = \Delta \mathbf{K}_{\theta}(t) \in [\Delta \mathbf{K}_{\text{min}}, \Delta \mathbf{K}_{\text{max}}]
+    \end{equation}
+    which dynamically scales the diagonal entries of the virtual stiffness matrix $\mathbf{K}_{\theta}(t) = \mathbf{K}_{\theta, 0} + \text{diag}(\mathbf{a}_t)$.
+    \item \textbf{Reward Function} $\mathcal{R}$: The agent is optimized using the Proximal Policy Optimization (PPO) algorithm to maximize the expected return under a reward function designed for soft contact:
+    \begin{equation}
+    r_t = w_1 r_{\text{grasp}} - w_2 \|\mathbf{f}_{\text{ext}}(t)\|^2 - w_3 \|\boldsymbol{\tau}(t)\|^2
+    \end{equation}
+    where $r_{\text{grasp}} \in \{0, 1\}$ is a sparse reward indicating ball containment, the second term penalizes excessive contact forces that cause ball rebound or link damage, and the third term encourages energy-efficient actuation.
+\end{enumerate}
+
+\subsection{Sim-to-Real Policy Transfer and Latency Compensation}
+The compliance policy is trained offline in Isaac Sim using massive parallel rollouts via DexGraspNet templates. To ensure robustness to real-world communication delays $h(t)$ estimated via the LKF framework, we apply domain randomization to the observation latencies during training, matching the maximum allowable delay bound $h_m$ calculated via the LMI constraints. This ensures the learned policy remains stable under network jitter when deployed online.
+
 
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{99}
