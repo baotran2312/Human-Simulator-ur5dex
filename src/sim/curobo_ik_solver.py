@@ -71,8 +71,15 @@ class UR5IKSolver:
         x_hand /= np.linalg.norm(x_hand)
         y_hand = np.cross(z_hand, x_hand)
 
-        R = np.column_stack([x_hand, y_hand, z_hand])
-        return R
+        R_base = np.column_stack([x_hand, y_hand, z_hand])
+
+        # 180 degree rotation around local Y-axis to align inner palm face towards ball (instead of back of hand)
+        R_flip = np.array([
+            [-1.0,  0.0,  0.0],
+            [ 0.0,  1.0,  0.0],
+            [ 0.0,  0.0, -1.0]
+        ])
+        return R_base @ R_flip
 
     def solve_ik(self, target_pos: np.ndarray, ball_vel: np.ndarray, 
                  q_current: Optional[np.ndarray] = None) -> Tuple[np.ndarray, bool]:

@@ -95,7 +95,17 @@ class ArticulatedUR5DEXSim:
             robot_prim = self.stage.DefinePrim(UR5DEXConfig.robot_prim_path, "Xform")
             robot_prim.GetReferences().AddReference(self.usd_path)
             UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
-            print(f"[ArticulatedSim] Loaded robot USD articulation asset: {self.usd_path}")
+            self._enable_robot_collisions(robot_prim)
+            print(f"[ArticulatedSim] Loaded robot USD articulation asset with collisions: {self.usd_path}")
+
+    def _enable_robot_collisions(self, root_prim):
+        """Enforces UsdPhysics & PhysX collision APIs on all UR5 and DH Hand link meshes."""
+        for prim in Usd.PrimRange(root_prim):
+            type_name = prim.GetTypeName()
+            if type_name in ["Mesh", "Capsule", "Sphere", "Cylinder", "Cube"]:
+                UsdPhysics.CollisionAPI.Apply(prim)
+                mesh_col = UsdPhysics.MeshCollisionAPI.Apply(prim)
+                mesh_col.CreateApproximationAttr().Set("convexHull")
         else:
             print(f"[WARNING] USD asset not found at {self.usd_path}.")
 
