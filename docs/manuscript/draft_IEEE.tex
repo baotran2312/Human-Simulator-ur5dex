@@ -1,20 +1,19 @@
-\documentclass[journal]{IEEEtran}
+\documentclass[letterpaper,journal]{IEEEtran}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{cite}
 
 \begin{document}
 
 \title{A Digital Twin-Driven Offline-to-Online Framework for Dynamic Dexterous Grasping with Synchronization and Latency Compensation}
 
 \author{Thien Bao Tran, The Tri Bui, Huu Tran Nhat Le, and Ha Quang Thinh Ngo
-\thanks{Ha Quang Thinh Ngo is with the FPT University, Ho Chi Minh City, Vietnam (corresponding author, phone: +84-961-382007; e-mail: thinhnhq2@fe.edu.vn).}%
-\thanks{Thien Bao Tran is with the Ho Chi Minh City University of Technology (HCMUT), 268 Ly Thuong Kiet, Dien Hong Ward, Ho Chi Minh City, Vietnam (e-mail: bao.tran2312sdh@hcmut.edu.vn).}%
-\thanks{The Tri Bui is with the Ho Chi Minh City University of Technology (HCMUT), 268 Ly Thuong Kiet, Dien Hong Ward, Ho Chi Minh City, Vietnam (e-mail: bttri.sdh231@hcmut.edu.vn).}%
-\thanks{Huu Tran Nhat Le is with the Ho Chi Minh City University of Technology (HCMUT), 268 Ly Thuong Kiet, Dien Hong Ward, Ho Chi Minh City, Vietnam (e-mail: lhtnhat.sdh232@hcmut.edu.vn).}}
+\thanks{Ha Quang Thinh Ngo is with the FPT University, Ho Chi Minh City, Vietnam (corresponding author; e-mail: thinhnhq2@fe.edu.vn).}%
+\thanks{Thien Bao Tran, The Tri Bui, and Huu Tran Nhat Le are with the Ho Chi Minh City University of Technology (HCMUT), Ho Chi Minh City, Vietnam (e-mails: bao.tran2312sdh@hcmut.edu.vn, bttri.sdh231@hcmut.edu.vn, lhtnhat.sdh232@hcmut.edu.vn).}}
 
 \maketitle
 
@@ -27,9 +26,11 @@ Digital Twin, Sim-to-Real, Dexterous Grasping, Dynamic Catching, cuRobo, Isaac S
 \end{IEEEkeywords}
 
 \section{Introduction}
-\IEEEPARstart{R}{obotic} manipulation has transitioned rapidly from simple pick-and-place tasks using parallel jaw grippers to sophisticated multi-fingered dexterous interaction. Among these manipulation challenges, catching a flying object (e.g., a ball) in mid-air represents a pinnacle of real-time perception, fast motion planning, and soft-contact mechanics. Unlike static grasping, dynamic catching requires the robot to: 1) predict the 3D trajectory of the incoming object, 2) plan a collision-free macro-trajectory for the arm to reach the interception point, and 3) coordinate the micro-joints of the multi-fingered hand to enclose the object at the exact moment of impact to dissipate kinetic energy.
+\IEEEPARstart{R}{obotic} manipulation has transitioned rapidly from simple pick-and-place tasks using parallel jaw grippers to sophisticated multi-fingered dexterous interaction \cite{salisbury_hand, mason_hand, okamura_hand}. Among these manipulation challenges, catching a flying object (e.g., a ball) in mid-air represents a pinnacle of real-time perception, fast motion planning, and soft-contact mechanics. Unlike static grasping, dynamic catching requires the robot to: 1) predict the 3D trajectory of the incoming object, 2) plan a collision-free macro-trajectory for the arm to reach the interception point, and 3) coordinate the micro-joints of the multi-fingered hand to enclose the object at the exact moment of impact to dissipate kinetic energy.
 
-To address these requirements, we propose a digital twin framework. The virtual twin in NVIDIA Isaac Sim runs physics-based simulations to generate valid catching trajectories. These trajectories are then executed by the physical UR5 arm and DH Robotics dexterous hand. By decoupling the online execution from complex simulation training (offline-to-online replay), we minimize real-world computation latency and ensure stable operational safety.
+Recent advancements in deep imitation learning (IL) and reinforcement learning (RL) have significantly expanded the boundaries of robotic dexterity in simulation \cite{dapg, gail}. However, transferring these policies to real hardware (Sim-to-Real) remains difficult due to discrepancies in contact friction, joint latency, and perception noise \cite{sim2real_survey, contact_survey}. Furthermore, time-varying communication latencies over network interfaces (e.g., Wi-Fi, Ethernet) introduce packet dropouts and non-differentiable network jitter, which can cause instability in closed-loop control schemes \cite{clik_delay}.
+
+To address these challenges, we propose a digital twin-driven offline-to-online framework. The virtual twin in NVIDIA Isaac Sim runs physics-based simulations to generate valid catching trajectories. These trajectories are then executed by the physical UR5 arm and DH Robotics dexterous hand. By decoupling the online execution from complex simulation training (offline-to-online replay), we minimize real-world computation latency and ensure stable operational safety. Our framework leverages high-speed GPU-accelerated motion planning to dynamically adapt to trajectory variations.
 
 The primary contributions of this paper are:
 \begin{itemize}
@@ -39,45 +40,96 @@ The primary contributions of this paper are:
 \end{itemize}
 
 \section{Related Work}
-\subsection{Dexterous Grasping in Simulation and Reality}
-Generating stable grasping configurations for high-DoF hands has been extensively studied. Recent works like DexGraspNet \cite{dexgraspnet} utilize reinforcement learning and physics engines (such as NVIDIA Isaac Gym) to generate massive datasets of dexterous grasps. However, transferring these policies to real hardware (Sim-to-Real) remains difficult due to discrepancies in contact friction, motor backlash, and latency.
+\subsection{Dexterous Grasping and In-Hand Manipulation}
+Generating stable grasping configurations for high-DoF hands has been extensively studied. Recent works utilize reinforcement learning and physics engines to generate massive datasets of dexterous grasps, such as DexGraspNet \cite{dextreme}. However, transferring these policies to real hardware remains a challenge due to visual and physical domain gaps. To ease the teleoperation data collection, frameworks like DexCap \cite{dexcap} and Robotic Telekinesis \cite{robotickinesis} capture human hand keypoints without wearable gloves, enabling behavior cloning (BC) directly from human video demonstrations. Other approaches like DIME \cite{dime} and AVAIL \cite{avail} leverage image milestones and K-Nearest Neighbors (KNN) to achieve data-efficient real-world policies. Furthermore, tactile feedback has been integrated into learning policies to achieve in-hand dexterity under blind or occluded conditions \cite{rotating_touch, contact_survey}.
 
-\subsection{Dynamic Object Catching and Trajectory Prediction}
-Dynamic catching requires fast perception and control. Classical approaches rely on active vision tracking and Kalman filtering to predict the parabolic trajectory of a ball. When coupled with multi-fingered hands, compliance control is critical to absorb the impact. In this paper, we integrate a compliance model into the joint controllers of the DH Robotics hand to achieve soft-contact capturing.
+\subsection{Trajectory Tracking and Motion Planning}
+Dynamic catching requires fast perception and control. Classical approaches rely on active vision tracking and Kalman filtering to predict the trajectory of a ball. Modern frameworks combine these filters with fast, collision-free motion planners. The emergence of cuRobo \cite{curobo} has enabled parallelized Inverse Kinematics (IK) and trajectory optimization on the GPU in under $5\,\text{ms}$. For redundant systems, null-space projection techniques are used to maintain natural anthropomorphic posture configurations while satisfying joint limits and avoiding self-collisions \cite{wholbody_mpc}.
 
-\subsection{Digital Twins in Robotics}
-Digital twins provide a bi-directional data flow between the virtual and physical spaces. Using middlewares like ROS 2 and lightweight communication brokers (WebSockets/TCP), contemporary systems synchronize simulated joint states with physical encoders. Our framework leverages these protocols to execute offline-optimized trajectories under safety bounds.
+\subsection{Digital Twins and Sim-to-Real Synchronization}
+Digital twins provide a bi-directional data flow between the virtual and physical spaces. Using middlewares like ROS 2 and lightweight communication brokers, contemporary systems synchronize simulated joint states with physical encoders. Teleoperation systems like AnyTeleop \cite{anyteleop} map human hands to robot configurations in real time, though they are highly sensitive to transmission delays. To overcome covariate shift and integration errors, waypoint-based imitation learning \cite{waypoint_il} and diffusion policies \cite{diffusionpolicy} have been proposed to generate smooth trajectories from sparse demonstrations.
 
-\section{Proposed Methodology}
-\subsection{Overall Framework Architecture}
-The proposed framework is structured in a hierarchical digital twin architecture consisting of three main blocks: 1) Perception and Trajectory Prediction, 2) Kinematic Planning (cuRobo), and 3) Physical Execution. In the virtual space (NVIDIA Isaac Sim), the camera model captures the flying object coordinates and transmits them to the prediction module. The planned trajectory is then streamed to the physical robot controllers (UR5 and DH Hand) via RTDE and Modbus TCP.
+\section{Preliminaries}
+\subsection{Singularity-Robust Kinematics via Damped Least-Squares}
+For a redundant manipulator like the 6-DoF UR5 arm, the relationship between the joint velocity vector $\dot{\mathbf{q}} \in \mathbb{R}^n$ and the end-effector spatial velocity $\mathbf{v} \in \mathbb{R}^m$ (where $n > m$) is defined via the analytical Jacobian matrix $\mathbf{J}(\mathbf{q}) \in \mathbb{R}^{m \times n}$:
+\begin{equation}
+\mathbf{v} = \mathbf{J}(\mathbf{q}) \dot{\mathbf{q}}
+\end{equation}
+Near singular configurations, the standard pseudoinverse $\mathbf{J}^\dagger = \mathbf{J}^T (\mathbf{J} \mathbf{J}^T)^{-1}$ suffers from velocity explosion. To guarantee singularity-robust tracking, we apply the Damped Least-Squares (DLS) formulation \cite{wholbody_mpc}:
+\begin{equation}
+\mathbf{J}^* = \mathbf{J}^T \left( \mathbf{J} \mathbf{J}^T + \lambda^2 \mathbf{I} \right)^{-1}
+\end{equation}
+where $\lambda \in \mathbb{R}^+$ is a damping factor that balances tracking accuracy and joint velocity magnitude. The joint command is computed as:
+\begin{equation}
+\dot{\mathbf{q}} = \mathbf{J}^* \mathbf{v} + \left( \mathbf{I} - \mathbf{J}^* \mathbf{J} \right) \dot{\mathbf{q}}_0
+\end{equation}
+where $\dot{\mathbf{q}}_0$ is a secondary task vector projected into the null-space of the Jacobian to optimize joint limits and avoid self-collisions.
 
-\subsection{3D Ball Trajectory Prediction}
-To calculate the interception point, the flight of the incoming ball is modeled by a non-linear differential equation incorporating gravity and aerodynamic drag:
+\subsection{Aerodynamic 3D Ball Trajectory Modeling}
+The dynamics of the flying ball of mass $m$ and cross-sectional area $A$ experiencing gravity and aerodynamic drag are modeled by:
 \begin{equation}
 \ddot{\mathbf{x}}(t) = -\frac{1}{2m} \rho C_d A \|\dot{\mathbf{x}}(t)\| \dot{\mathbf{x}}(t) + \mathbf{g}
 \end{equation}
-where $\mathbf{x}(t) \in \mathbb{R}^3$ represents the 3D position of the ball, $m = 0.15\,\text{kg}$ is the mass, $\rho = 1.225\,\text{kg/m}^3$ is the air density, $C_d = 0.47$ is the drag coefficient of a sphere, $A$ is the cross-sectional area, and $\mathbf{g} = [0, 0, -9.81]^T\,\text{m/s}^2$ is the gravity vector. An Extended Kalman Filter (EKF) is implemented online to continuously estimate the state vector $\mathbf{s}_k = [\mathbf{x}_k, \dot{\mathbf{x}}_k]^T$ using virtual camera observations, outputting the predicted interception point $\mathbf{p}_{\text{int}}$ and arrival time $T_{\text{catch}}$.
+where $\mathbf{x}(t) \in \mathbb{R}^3$ is the ball position, $\rho$ is the air density, $C_d$ is the drag coefficient, and $\mathbf{g} = [0, 0, -9.81]^T$ is the gravity vector. An Extended Kalman Filter (EKF) estimates the state vector $\mathbf{s}_k = [\mathbf{x}_k, \dot{\mathbf{x}}_k]^T$ recursively:
+\begin{align}
+\mathbf{s}_{k|k-1} &= \mathbf{f}(\mathbf{s}_{k-1|k-1}) \\
+\mathbf{P}_{k|k-1} &= \mathbf{F}_k \mathbf{P}_{k-1|k-1} \mathbf{F}_k^T + \mathbf{Q}
+\end{align}
+where $\mathbf{F}_k$ is the Jacobian of the transition model $\mathbf{f}$, and $\mathbf{Q}$ represents process noise. The measurement update matches predicted positions against visual coordinates.
 
-\subsection{GPU-Accelerated Arm Kinematics with cuRobo}
-Once the interception point $\mathbf{p}_{\text{int}}$ is identified, the joint configuration of the 6-DoF UR5 arm is solved using cuRobo, which provides parallelized Levenberg-Marquardt optimization on the GPU:
+\subsection{Delay Modeling and Lyapunov-Krasovskii Stability}
+In teleoperated and co-controlled digital twins, network delay introduces time-varying latency $h(t)$. The closed-loop tracking error $\mathbf{e}(t) = \mathbf{q}_d(t - h(t)) - \mathbf{q}(t)$ is governed by:
 \begin{equation}
-\mathbf{q}^* = \arg\min_{\mathbf{q}} \left( \|\mathbf{f}(\mathbf{q}) - \mathbf{p}_{\text{int}}\|^2 + \lambda \|\mathbf{q} - \mathbf{q}_0\|^2 + H(\mathbf{q}) \right)
+\dot{\mathbf{e}}(t) = -\mathbf{K}_p \mathbf{e}(t) - \mathbf{K}_d \mathbf{e}(t - h(t))
 \end{equation}
-where $\mathbf{f}(\mathbf{q})$ is the forward kinematics, $\mathbf{q}_0$ is the current joint configuration, $\lambda$ is a damping factor, and $H(\mathbf{q})$ is the obstacle collision avoidance cost function. This optimization converges in $< 5\,\text{ms}$, allowing the arm to dynamic re-plan under sudden target changes.
-
-\subsection{Dexterous Grasping Compliance Control}
-To prevent the ball from bouncing off the palm upon contact, we implement a compliance control law for the joints of the 5-fingered DH hand. The motor torque $\tau_i$ for each finger joint is governed by:
+To prove Input-to-State Stability (ISS) under bounded delay $0 \le h(t) \le h_m$ and delay derivative $\dot{h}(t) \le d < 1$, we define a Lyapunov-Krasovskii Functional (LKF) \cite{clik_delay}:
 \begin{equation}
-\tau_i = K_p (q_{d,i} - q_i) + K_d (\dot{q}_{d,i} - \dot{q}_i) - F_{\text{compliance}}
+V(t) = \mathbf{e}^T(t) \mathbf{P} \mathbf{e}(t) + \int_{t-h(t)}^{t} \mathbf{e}^T(s) \mathbf{Q} \mathbf{e}(s) ds + \int_{-h_m}^{0} \int_{t+\theta}^{t} \dot{\mathbf{e}}^T(s) \mathbf{R} \dot{\mathbf{e}}(s) ds d\theta
 \end{equation}
-where $K_p$ and $K_d$ are the proportional and derivative gains, $q_{d,i}$ and $q_i$ are the target and current joint angles, and $F_{\text{compliance}}$ is the adaptive impedance force feedback estimated via the motor current signature. This ensures the fingers deform reactively upon contact, absorbing the impact energy.
+Using the reciprocal convexity lemma, the stability condition $\dot{V}(t) < 0$ is formulated as a set of Linear Matrix Inequalities (LMIs), allowing the estimation of maximum allowable delay $h_m$ and control gains $\mathbf{K}_p, \mathbf{K}_d$.
 
+\subsection{Joint Impedance and Contact Compliance of Dexterous Hands}
+Upon contact with the high-speed ball, the joints of the multi-fingered DH hand must act compliantly to absorb impact energy and avoid rebound. The torque command $\boldsymbol{\tau}_j$ for each finger joint is governed by an active impedance law:
+\begin{equation}
+\boldsymbol{\tau}_j = \mathbf{K}_{\theta} (\boldsymbol{\theta}_d - \boldsymbol{\theta}) + \mathbf{D}_{\theta} (\dot{\boldsymbol{\theta}}_d - \dot{\boldsymbol{\theta}}) - \mathbf{J}_h^T \mathbf{f}_{\text{ext}}
+\end{equation}
+where $\boldsymbol{\theta}_d$ and $\boldsymbol{\theta}$ represent target and actual finger joint angles, $\mathbf{K}_{\theta}$ and $\mathbf{D}_{\theta}$ are virtual stiffness and damping matrices, $\mathbf{J}_h$ is the hand contact Jacobian, and $\mathbf{f}_{\text{ext}}$ is the contact force vector estimated via motor current measurements.
 
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{99}
-\bibitem{dexgraspnet}
-R. Ruicheng et al., ``DexGraspNet: A Large-Scale Robotic Dexterous Grasp Dataset in Simulation,'' *IEEE Transactions on Robotics*, 2023.
+\bibitem{salisbury_hand} J. K. Salisbury and J. J. Craig, ``Articulated hands: Force control and kinematic issues,'' *Int. J. Robot. Res.*, vol. 1, no. 1, pp. 4--17, 1982.
+\bibitem{mason_hand} M. T. Mason and J. K. Salisbury, ``Robot hands and the mechanics of manipulation,'' *IEEE Trans. Autom. Control*, vol. 31, pp. 879--880, 1986.
+\bibitem{okamura_hand} A. Okamura, N. Smaby, and M. Cutkosky, ``An overview of dexterous manipulation,'' in *ICRA*, 2000, pp. 255--262.
+\bibitem{dapg} A. Rajeswaran et al., ``Learning complex dexterous manipulation with deep reinforcement learning and demonstrations,'' in *RSS*, 2018.
+\bibitem{gail} J. Ho and S. Ermon, ``Generative adversarial imitation learning,'' in *NeurIPS*, 2016.
+\bibitem{sim2real_survey} A. Pitkevich and I. Makarov, ``A survey on sim-to-real transfer methods for robotic manipulation,'' in *SISY*, 2024, pp. 259--266.
+\bibitem{contact_survey} T. Tsuji et al., ``A survey on imitation learning for contact-rich tasks in robotics,'' *arXiv preprint arXiv:2506.13498*, 2025.
+\bibitem{clik_delay} T. B. Tran, T. T. Bui, H. T. N. Le, and H. Q. T. Ngo, ``Delay-Robust Closed-Loop Inverse Kinematics Control for Unified 25-DoF Arm-Hand Dexterous Teleoperation Systems,'' *IEEE Transactions on Robotics*, vol. 22, no. 7, 2026.
+\bibitem{dextreme} A. Handa et al., ``DeXtreme: Transfer of agile in-hand manipulation from simulation to reality,'' in *ICRA*, 2023, pp. 5977--5984.
+\bibitem{dexcap} C. Wang et al., ``DexCap: Scalable and Portable Mocap Data Collection System for Dexterous Manipulation,'' in *RSS*, 2024.
+\bibitem{robotickinesis} A. Sivakumar et al., ``Robotic telekinesis: Learning a robotic hand imitator by watching humans on youtube,'' in *RSS*, 2022.
+\bibitem{dime} S. P. Arunachalam et al., ``Dexterous imitation made easy: A learning-based framework for efficient dexterous manipulation,'' in *ICRA*, 2023, pp. 5954--5961.
+\bibitem{avail} K. Xu et al., ``Dexterous manipulation from images: Autonomous real-world rl via substep guidance,'' in *ICRA*, 2023, pp. 5938--5945.
+\bibitem{rotating_touch} Z.-H. Yin et al., ``Rotating without seeing: Towards in-hand dexterity through touch,'' in *RSS*, 2023.
+\bibitem{curobo} B. Sundaralingam et al., ``cuRobo: Parallelized Motion Generation on the GPU,'' in *ICRA*, 2023.
+\bibitem{wholbody_mpc} J.-P. Sleiman et al., ``A unified mpc framework for whole-body dynamic locomotion and manipulation,'' *IEEE Robot. Autom. Lett.*, vol. 6, no. 3, pp. 4688--4695, 2021.
+\bibitem{anyteleop} Y. Qin et al., ``AnyTeleop: A general vision-based dexterous robot arm-hand teleoperation system,'' in *RSS*, 2023.
+\bibitem{waypoint_il} L. X. Shi et al., ``Waypoint-based imitation learning for robotic manipulation,'' in *CoRL*, 2023, pp. 2195--2209.
+\bibitem{diffusionpolicy} C. Chi et al., ``Diffusion policy: Visuomotor policy learning via action diffusion,'' *Int. J. Robot. Res.*, 2023.
+\bibitem{stabilizetoact} J. Grannen et al., ``Stabilize to act: Learning to coordinate for bimanual manipulation,'' in *CoRL*, 2023, pp. 563--576.
+\bibitem{difflfd} X. Zhu et al., ``Diff-LfD: Contact-aware model-based learning from visual demonstration for robotic manipulation via differentiable physics-based simulation,'' in *CoRL*, 2023.
+\bibitem{implicitbc} P. Florence et al., ``Implicit behavioral cloning,'' in *CoRL*, 2022, pp. 158--168.
+\bibitem{hydra} S. Belkhale et al., ``HYDRA: Hybrid robot actions for imitation learning,'' in *CoRL*, 2023, pp. 2113--2133.
+\bibitem{hiveformer} P.-L. Guhur et al., ``Instruction-driven history-aware policies for robotic manipulations,'' in *CoRL*, 2023, pp. 175--187.
+\bibitem{leaphand} K. Shaw et al., ``LEAP hand: Low-cost, efficient, and anthropomorphic hand for robot learning,'' in *RSS*, 2023.
+\bibitem{transporternet} A. Zeng et al., ``Transporter networks: Rearranging the visual world for robotic manipulation,'' in *CoRL*, 2021, pp. 726--747.
+\bibitem{deformable_linear} M. Yu et al., ``Generalizable whole-body global manipulation of deformable linear objects by dual-arm robot in 3-d constrained environments,'' *Int. J. Robot. Res.*, vol. 44, no. 4, pp. 607--639, 2025.
+\bibitem{magnetic_millirobots} S. Zhong et al., ``Paired interactions of magnetic millirobots in confined spaces through data-driven disturbance rejection control under global input,'' *IEEE/ASME Trans. Mechatron.*, 2025.
+\bibitem{srth} J. W. Kim et al., ``SRT-H: A hierarchical framework for autonomous surgery via language-conditioned imitation learning,'' *Sci. Robot.*, vol. 10, no. 104, 2025.
+\bibitem{lotus} W. Wan et al., ``LOTUS: Continual imitation learning for robot manipulation through unsupervised skill discovery,'' in *ICRA*, 2023, pp. 537--544.
+\bibitem{teach_fish} S. Haldar et al., ``Teach a robot to fish: Versatile imitation from one minute of demonstrations,'' in *RSS*, 2023.
+\bibitem{embodied_survey} G. Li et al., ``The developments and challenges towards dexterous and embodied robotic manipulation: A survey,'' *arXiv preprint arXiv:2507.11840*, 2025.
+\bibitem{fusion_transformer} Y. Liu et al., ``Fusion-perception-to-action transformer: Enhancing robotic manipulation with 3d visual fusion attention and proprioception,'' *IEEE Trans. Robot.*, vol. 41, pp. 1553--1567, 2025.
 \end{thebibliography}
 
 \end{document}
