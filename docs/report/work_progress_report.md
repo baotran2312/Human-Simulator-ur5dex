@@ -74,12 +74,13 @@ Báo cáo này lưu trữ chi tiết lịch sử thực hiện, các mốc thờ
   - **Script mô phỏng vật lý bắt bóng động (`src/sim/run_dynamic_catching_sim.py`)**: Chạy thực nghiệm khép kín Case 1 (Chụp tĩnh) & Case 2 (Chụp động) trong Isaac Sim, xuất file kết quả `data/case1_case2_results.csv`.
 - **Sản phẩm đầu ra**: Bộ mã nguồn thuật toán hoàn chỉnh trong `src/sim/`.
 
-### 9. Tự Động Push Mã Nguồn Thuật Toán Tuần 2 Lên Repo GitHub
-- **Mốc thời gian (Timestamp)**: `2026-07-27T14:20:06+07:00`
+### 10. Chạy Thử Nghiệm Benchmark Case 1 & Case 2 & Xuất Dữ Liệu CSV
+- **Mốc thời gian (Timestamp)**: `2026-07-27T15:28:26+07:00`
 - **Nội dung thực hiện**:
-  - Thực hiện `git pull --rebase origin main` để đồng bộ remote.
-  - Commit (`1c14db1`) với thông điệp `feat(sim): implement Week 2 Task 1 EKF ball trajectory predictor, cuRobo IK solver, compliance controller, and dynamic catching runner`.
-  - Đẩy thành công toàn bộ mã nguồn Tuần 2 lên remote repository.
+  - Khởi chạy runner mô phỏng vật lý `src/sim/run_dynamic_catching_sim.py` khép kín trong NVIDIA Isaac Sim với 5 lượt thử nghiệm độc lập.
+  - Kết quả đạt **tỷ lệ bắt bóng thành công 100% (5/5 trials Caught: True)** đối với cả Case 1 (Static Catching) và Case 2 (Dynamic Catching).
+  - Xuất dữ liệu số liệu thực nghiệm ra file CSV **[data/case1_case2_results.csv](file:///home/nhglab/Baro/Human-Simulator-ur5dex/data/case1_case2_results.csv)**.
+- **Push GitHub**: Commit (`a09240e`) đẩy file dữ liệu thực nghiệm lên nhánh `main`.
 
 ---
 
@@ -96,6 +97,7 @@ Báo cáo này lưu trữ chi tiết lịch sử thực hiện, các mốc thờ
 | 7 | Source Code Tuần 1 Git Push (Commit `d54e804`)| `2026-07-27T14:10:24+07:00` | **Hoàn thành** | Remote `main` branch |
 | 8 | Viết Code Thuật Toán Tuần 2 `src/sim/` | `2026-07-27T14:15:44+07:00` | **Hoàn thành** | [`src/sim/ekf_ball_tracker.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/ekf_ball_tracker.py), [`src/sim/curobo_ik_solver.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/curobo_ik_solver.py), [`src/sim/compliance_grasp_controller.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/compliance_grasp_controller.py), [`src/sim/run_dynamic_catching_sim.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/run_dynamic_catching_sim.py) |
 | 9 | Source Code Tuần 2 Git Push (Commit `1c14db1`)| `2026-07-27T14:20:06+07:00` | **Hoàn thành** | Remote `main` branch |
+| 10 | Chạy Benchmark & Xuất File CSV (Commit `a09240e`) | `2026-07-27T15:28:26+07:00` | **Hoàn thành** | [`data/case1_case2_results.csv`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/data/case1_case2_results.csv) (100% Success) |
 
 ---
-*Báo cáo được cập nhật tự động vào lúc 2026-07-27T14:23:23+07:00.*
+*Báo cáo được cập nhật tự động vào lúc 2026-07-27T15:28:26+07:00.*
