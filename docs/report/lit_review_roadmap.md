@@ -12,12 +12,21 @@
 
 ---
 
-## II. QUY TRÌNH 4 BƯỚC ĐỌC VÀ TRÍCH XUẤT (4-STEP EXTRACTION PROTOCOL)
+## II. QUY TRÌNH QUY CHUẨN LITERATURE REVIEW (EXPANDED TO 50 PAPERS)
+
+### Bước 0: Mở Rộng Cơ Sở Dữ Liệu Tài Liệu Tham Khảo (Target ~50 Papers)
+Vì 5 bài nghiên cứu hiện tại là quá ít đối với tiêu chuẩn của một bài báo Q1 (thông thường cần từ 40 - 70 tài liệu tham khảo), quy trình cần bổ sung bước mở rộng và sàng lọc tài liệu như sau:
+1. **Tìm kiếm nguồn tài liệu (Search Strategy)**:
+   * Sử dụng Google Scholar, IEEE Xplore, ScienceDirect và arXiv với các từ khóa kết hợp: `("dexterous grasping" OR "dynamic catching") AND ("robotic arm-hand" OR "UR5") AND ("digital twin" OR "Sim-to-Real") AND ("time delay" OR "latency compensation")`.
+   * Mục tiêu: Thu thập khoảng **50 bài báo liên quan** (ưu tiên xuất bản trong 3-5 năm gần đây từ các hội nghị/tạp chí uy tín như IEEE TRO, ICRA, IROS, T-MECH).
+2. **Sàng lọc tài liệu (Filtering Criteria)**:
+   * *Vòng 1 (Sàng lọc Title/Abstract)*: Loại bỏ các bài chỉ làm về gắp vật thể tĩnh hoặc kẹp 2 ngón đơn giản. Giữ lại các nghiên cứu tập trung vào hệ thống arm-hand khéo léo (bàn tay nhiều ngón) hoặc điều khiển vật thể động (dynamic objects).
+   * *Vòng 2 (Sàng lọc Full-text)*: Giữ lại khoảng **15 - 20 bài báo chất lượng nhất** có số liệu thực nghiệm định lượng rõ ràng để phục vụ xây dựng bảng SOTA và phần Preliminaries.
 
 ### Bước 1: Hệ Thống Hóa và Phân Loại Nghiên Cứu
-Phân bổ 5 tài liệu hiện có vào các trục nghiên cứu cốt lõi:
+Phân bổ 5 tài liệu hiện có và các tài liệu mới tìm kiếm được vào các trục nghiên cứu cốt lõi:
 * **Trục 1: Dataset & Grasping Policy (Chính sách nắm bắt)**
-  * *Tài liệu*: `A Review on Dataset Collection Strategies...` và `An overview of learning-based dexterous grasping...`
+  * *Tài liệu*: `A Review on Dataset Collection Strategies...`, `An overview of learning-based dexterous grasping...` và các bài mới tìm được.
   * *Nội dung trích xuất*: Các phương pháp sinh pose chụp bóng trong Isaac Gym (DexGraspNet, GraspIt!), cách thu thập dữ liệu chuyên gia để huấn luyện củng cố (RL).
 * **Trục 2: Perception & Trajectory Tracking (Nhận diện & Quỹ đạo)**
   * *Tài liệu*: `A review on deep learning for vision-based hand detection...`
@@ -59,9 +68,11 @@ Chúng ta sẽ mở trực tiếp từng file markdown trong thư mục `docs/li
 
 ## III. KẾ HOẠCH HÀNH ĐỘNG CHI TIẾT (ACTION PLAN)
 
-* **Hạng mục 1: Đọc và Trích xuất số liệu định lượng (Thời gian: 2 ngày)**
-  * Quét các bài báo để ghi lại thông số DoF, tần số, độ trễ và tỷ lệ thành công của các hệ thống arm-hand hiện tại.
-* **Hạng mục 2: Soạn thảo tệp `preliminaries.md` chứa toàn bộ công thức toán học chuẩn (Thời gian: 1 ngày)**
+* **Hạng mục 1: Tìm kiếm và lọc tài liệu tham khảo (Thời gian: 3 ngày)**
+  * Thực hiện tìm kiếm 50 tài liệu liên quan thông qua các database học thuật, lọc ra 15-20 tài liệu phục vụ đối chứng SOTA và lưu thông tin trích dẫn.
+* **Hạng mục 2: Đọc và Trích xuất số liệu định lượng (Thời gian: 2 ngày)**
+  * Quét các bài báo đã lọc để ghi lại thông số DoF, tần số, độ trễ và tỷ lệ thành công của các hệ thống arm-hand hiện tại.
+* **Hạng mục 3: Soạn thảo tệp `preliminaries.md` chứa toàn bộ công thức toán học chuẩn (Thời gian: 1 ngày)**
   * Hệ thống các công thức động học, lý thuyết ổn định Lyapunov và Kalman Filter.
-* **Hạng mục 3: Cập nhật tệp `draft_IEEE.tex` (Thời gian: 1 ngày)**
+* **Hạng mục 4: Cập nhật tệp `draft_IEEE.tex` (Thời gian: 1 ngày)**
   * Chèn bảng SOTA và bổ sung các trích dẫn tài liệu tham khảo chính xác vào các Section I, II, III.
