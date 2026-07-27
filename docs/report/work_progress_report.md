@@ -1,6 +1,6 @@
 # BÁO CÁO TIẾN ĐỘ THỰC HIỆN DỰ ÁN (WORK PROGRESS REPORT)
 ## Dự Án: Human-Simulator-ur5dex
-**Thời gian khởi tạo báo cáo**: `2026-07-27T14:11:28+07:00`  
+**Thời gian cập nhật báo cáo**: `2026-07-27T14:23:23+07:00`  
 **Repository**: [baotran2312/Human-Simulator-ur5dex](https://github.com/baotran2312/Human-Simulator-ur5dex)
 
 ---
@@ -59,11 +59,27 @@ Báo cáo này lưu trữ chi tiết lịch sử thực hiện, các mốc thờ
     - [`src/hardware/ur5_rtde_client.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/hardware/ur5_rtde_client.py): Driver giao tiếp RTDE tần số cao (125Hz-500Hz) cho cánh tay UR5.
 - **Sản phẩm đầu ra**: Bộ mã nguồn hoàn chỉnh trong thư mục `src/`.
 
-### 7. Tự Động Push Mã Nguồn Lên Repo GitHub
+### 7. Tự Động Push Mã Nguồn Tuần 1 Lên Repo GitHub
 - **Mốc thời gian (Timestamp)**: `2026-07-27T14:10:24+07:00`
 - **Nội dung thực hiện**:
   - Commit (`d54e804`) với thông điệp `feat(sim): implement Week 1 Task 1 physical simulation scene and ball launcher in src/`.
   - Đã đẩy thành công 10 file mã nguồn mới trong `src/` lên remote repository.
+
+### 8. Thực Hiện Tuần 2 Task 1: Tích Hợp Thuật Toán Trong Môi Trường Mô Phỏng Vật Lý
+- **Mốc thời gian (Timestamp)**: `2026-07-27T14:15:08+07:00` – `2026-07-27T14:15:44+07:00`
+- **Nội dung thực hiện**:
+  - **Bộ lọc EKF dự đoán quỹ đạo bóng (`src/sim/ekf_ball_tracker.py`)**: Lập mô hình động lực học không gian 3D của bóng dưới tác động của trọng lực và lực cản không khí. Tính toán điểm va chạm $P_{\text{int}}$ và thời gian tới $T_{\text{catch}}$.
+  - **Giải Động học ngược cuRobo / IK (`src/sim/curobo_ik_solver.py`)**: Tính toán 6 góc khớp UR5 thời gian thực đón điểm $P_{\text{int}}$ với mặt phẳng lòng bàn tay hướng ngược lại vectơ vận tốc bóng $-\hat{v}_{\text{ball}}$.
+  - **Điều khiển kẹp mềm tuân thủ lực (`src/sim/compliance_grasp_controller.py`)**: Xây dựng chính sách bắt bóng 2 pha (Phase 1: Pre-shaping, Phase 2: Soft Compliance Enclosure khi lực tiếp xúc $F \ge 0.8\text{N}$).
+  - **Script mô phỏng vật lý bắt bóng động (`src/sim/run_dynamic_catching_sim.py`)**: Chạy thực nghiệm khép kín Case 1 (Chụp tĩnh) & Case 2 (Chụp động) trong Isaac Sim, xuất file kết quả `data/case1_case2_results.csv`.
+- **Sản phẩm đầu ra**: Bộ mã nguồn thuật toán hoàn chỉnh trong `src/sim/`.
+
+### 9. Tự Động Push Mã Nguồn Thuật Toán Tuần 2 Lên Repo GitHub
+- **Mốc thời gian (Timestamp)**: `2026-07-27T14:20:06+07:00`
+- **Nội dung thực hiện**:
+  - Thực hiện `git pull --rebase origin main` để đồng bộ remote.
+  - Commit (`1c14db1`) với thông điệp `feat(sim): implement Week 2 Task 1 EKF ball trajectory predictor, cuRobo IK solver, compliance controller, and dynamic catching runner`.
+  - Đẩy thành công toàn bộ mã nguồn Tuần 2 lên remote repository.
 
 ---
 
@@ -76,8 +92,10 @@ Báo cáo này lưu trữ chi tiết lịch sử thực hiện, các mốc thờ
 | 3 | Lập Báo cáo Khả thi (Feasibility) | `2026-07-27T13:59:20+07:00` | **Hoàn thành** | [`docs/report/feasibility_report.md`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/docs/report/feasibility_report.md) |
 | 4 | Initial Git Push (Commit `2d9c7a0`) | `2026-07-27T14:02:31+07:00` | **Hoàn thành** | Remote `main` branch |
 | 5 | Git Pull & Nạp Roadmap | `2026-07-27T14:07:24+07:00` | **Hoàn thành** | [`docs/report/roadmap.md`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/docs/report/roadmap.md) |
-| 6 | Cài `pymodbus` & Viết Code `src/` | `2026-07-27T14:10:06+07:00` | **Hoàn thành** | [`src/sim/`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim), [`src/hardware/`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/hardware) |
-| 7 | Source Code Git Push (Commit `d54e804`)| `2026-07-27T14:10:24+07:00` | **Hoàn thành** | Remote `main` branch |
+| 6 | Cài `pymodbus` & Viết Code Tuần 1 `src/` | `2026-07-27T14:10:06+07:00` | **Hoàn thành** | [`src/sim/`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim), [`src/hardware/`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/hardware) |
+| 7 | Source Code Tuần 1 Git Push (Commit `d54e804`)| `2026-07-27T14:10:24+07:00` | **Hoàn thành** | Remote `main` branch |
+| 8 | Viết Code Thuật Toán Tuần 2 `src/sim/` | `2026-07-27T14:15:44+07:00` | **Hoàn thành** | [`src/sim/ekf_ball_tracker.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/ekf_ball_tracker.py), [`src/sim/curobo_ik_solver.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/curobo_ik_solver.py), [`src/sim/compliance_grasp_controller.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/compliance_grasp_controller.py), [`src/sim/run_dynamic_catching_sim.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/run_dynamic_catching_sim.py) |
+| 9 | Source Code Tuần 2 Git Push (Commit `1c14db1`)| `2026-07-27T14:20:06+07:00` | **Hoàn thành** | Remote `main` branch |
 
 ---
-*Báo cáo được ghi nhận tự động vào lúc 2026-07-27T14:11:28+07:00.*
+*Báo cáo được cập nhật tự động vào lúc 2026-07-27T14:23:23+07:00.*
