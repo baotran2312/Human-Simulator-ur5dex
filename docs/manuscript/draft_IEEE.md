@@ -32,7 +32,7 @@ The primary contributions of this paper are:
 ## II. Related Work
 
 ### A. Dexterous Grasping and In-Hand Manipulation
-Generating stable grasping configurations for high-DoF hands has been extensively studied. Recent works utilize reinforcement learning and physics engines to generate massive datasets of dexterous grasps, such as DexGraspNet [9, 24]. However, transferring these policies to real hardware remains a challenge due to visual and physical domain gaps. To ease the teleoperation data collection, frameworks like DexCap [10] and Robotic Telekinesis [11] capture human hand keypoints without wearable gloves, enabling behavior cloning (BC) directly from human video demonstrations [20, 26]. Other approaches like DIME [12] and AVAIL [13] leverage image milestones and K-Nearest Neighbors (KNN) to achieve data-efficient real-world policies [27]. Furthermore, tactile feedback has been integrated into learning policies to achieve in-hand dexterity under blind or occluded conditions [14, 7, 28].
+Generating stable grasping configurations for high-DoF hands has been extensively studied. Recent works utilize reinforcement learning and physics engines to generate massive datasets of dexterous grasps, such as DexGraspNet [9, 24]. However, transferring these policies to real hardware remains a challenge due to visual and physical domain gaps. To ease the teleoperation data collection, frameworks like DexCap [10] and Robotic Telekinesis [11] capture human hand keypoints without wearable gloves, enabling behavior cloning (BC) directly from human video demonstrations [20, 26]. Other approaches like DIME [12] and AVAIL [13] leverage image milestones and K-Nearest Neighbors (KNN) to achieve data-efficient real-world policies [27]. Furthermore, tactile feedback has been integrated into learning policies to achieve in-hand dexterity under blind or occluded conditions [14, 7].
 
 ### B. Trajectory Tracking and Motion Planning
 Dynamic catching requires fast perception and control. Classical approaches rely on active vision tracking and Kalman filtering to predict the trajectory of a ball. Modern frameworks combine these filters with fast, collision-free motion planners. The emergence of cuRobo [15] has enabled parallelized Inverse Kinematics (IK) and trajectory optimization on the GPU in under $5\,\text{ms}$ [15]. For redundant systems, null-space projection techniques are used to maintain natural anthropomorphic posture configurations while satisfying joint limits and avoiding self-collisions [16].
@@ -149,14 +149,14 @@ This paper presented a digital twin-driven offline-to-online framework for dynam
 ---
 
 ## References
-* **[1]** J. K. Salisbury and J. J. Craig, "Articulated hands: Force control and kinematic issues," *Int. J. Robot. Res.*, vol. 1, no. 1, pp. 4–17, 1982.
-* **[2]** M. T. Mason and J. K. Salisbury, "Robot hands and the mechanics of manipulation," *IEEE Trans. Autom. Control*, vol. 31, pp. 879–880, 1986.
-* **[3]** A. Okamura, N. Smaby, and M. Cutkosky, "An overview of dexterous manipulation," in *ICRA*, 2000, pp. 255–262.
-* **[4]** A. Rajeswaran et al., "Learning complex dexterous manipulation with deep reinforcement learning and demonstrations," in *RSS*, 2018.
-* **[5]** J. Ho and S. Ermon, "Generative adversarial imitation learning," in *NeurIPS*, 2016.
+* **[1]** S. Yang et al., "TRX-Hand5: An anthropomorphic hand with integrated tactile feedback for grasping and manipulation in human environments," in *IROS*, 2024, pp. 5289–5296.
+* **[2]** J. Zhou, J. Huang, Dou, Q., P. Abbeel, and Y. Liu, "A dexterous and compliant (DexCo) hand based on soft hydraulic actuation for human-inspired fine in-hand manipulation," *IEEE Transactions on Robotics*, vol. 41, pp. 666–686, 2024.
+* **[3]** J. Zhang et al., "Dexterous hand towards intelligent manufacturing: A review of technologies, trends, and potential applications," *Robotics and Computer-Integrated Manufacturing*, vol. 95, p. 103021, 2025.
+* **[4]** X. Zhou, B. Yu, Y. Mao, K. Yang, S. Cai, and G. Bao, "Grasp force optimization in the design of a humanoid dexterous hand fingertips," in *ROBIO*, 2022, pp. 790–796.
+* **[5]** A. Tang et al., "Humanmimic: Learning natural locomotion and transitions for humanoid robot via wasserstein adversarial imitation," in *ICRA*, 2024, pp. 13107–13114.
 * **[6]** A. Pitkevich and I. Makarov, "A survey on sim-to-real transfer methods for robotic manipulation," in *SISY*, 2024, pp. 259–266.
 * **[7]** T. Tsuji et al., "A survey on imitation learning for contact-rich tasks in robotics," *arXiv preprint arXiv:2506.13498*, 2025.
-* **[8]** T. B. Tran, T. T. Bui, H. T. N. Le, and H. Q. T. Ngo, "Delay-Robust Closed-Loop Inverse Kinematics Control for Unified 25-DoF Arm-Hand Dexterous Teleoperation Systems," *IEEE Transactions on Robotics*, vol. 42, no. 3, pp. 1515–1528, 2026.
+* **[8]** Y. Liu, D. Xiong, L. Wang, and C.-K. Zhang, "Stability Analysis of Haptic Systems With Time-Varying Delay via a Delay-Product-Type Lyapunov–Krasovskii Functional," *IEEE Transactions on Circuits and Systems II: Express Briefs*, vol. 69, no. 11, pp. 4339–4343, 2022.
 * **[9]** R. Wang, J. Zhang, J. Chen, Y. Xu, P. Li, T. Liu, and H. Wang, "DexGraspNet: A Large-Scale Robotic Dexterous Grasp Dataset in Simulation," in *Proceedings of the IEEE International Conference on Robotics and Automation (ICRA)*, 2023, pp. 11359–11366.
 * **[10]** C. Wang et al., "DexCap: Scalable and Portable Mocap Data Collection System for Dexterous Manipulation," in *RSS*, 2024.
 * **[11]** A. Sivakumar et al., "Robotic telekinesis: Learning a robotic hand imitator by watching humans on youtube," in *RSS*, 2022.

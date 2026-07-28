@@ -26,9 +26,9 @@ Digital Twin, Sim-to-Real, Dexterous Grasping, Dynamic Catching, cuRobo, Isaac S
 \end{IEEEkeywords}
 
 \section{Introduction}
-\IEEEPARstart{R}{obotic} manipulation has transitioned rapidly from simple pick-and-place tasks using parallel jaw grippers to sophisticated bimanual and multi-fingered dexterous interaction \cite{salisbury_hand, mason_hand, okamura_hand, bimanual_manipulation}. Among these manipulation challenges, catching a flying object (e.g., a ball) in mid-air represents a pinnacle of real-time perception, fast motion planning, and soft-contact mechanics. Unlike static grasping, dynamic catching requires the robot to: 1) predict the 3D trajectory of the incoming object, 2) plan a collision-free macro-trajectory for the arm to reach the interception point, and 3) coordinate the micro-joints of the multi-fingered hand to enclose the object at the exact moment of impact to dissipate kinetic energy.
+\IEEEPARstart{R}{obotic} manipulation has transitioned rapidly from simple pick-and-place tasks using parallel jaw grippers to sophisticated bimanual and multi-fingered dexterous interaction \cite{trx_hand5, dexco_hand, manufacturing_hand_review, bimanual_manipulation}. Among these manipulation challenges, catching a flying object (e.g., a ball) in mid-air represents a pinnacle of real-time perception, fast motion planning, and soft-contact mechanics. Unlike static grasping, dynamic catching requires the robot to: 1) predict the 3D trajectory of the incoming object, 2) plan a collision-free macro-trajectory for the arm to reach the interception point, and 3) coordinate the micro-joints of the multi-fingered hand to enclose the object at the exact moment of impact to dissipate kinetic energy.
 
-Recent advancements in deep imitation learning (IL), reinforcement learning (RL), and task abstraction have significantly expanded the boundaries of robotic dexterity in simulation \cite{dapg, gail, visual_policy_clutter}. However, transferring these policies to real hardware (Sim-to-Real) remains difficult due to discrepancies in contact friction, joint latency, and perception noise \cite{sim2real_survey, contact_survey}. Furthermore, time-varying communication latencies over network interfaces (e.g., Wi-Fi, Ethernet) introduce packet dropouts and non-differentiable network jitter, which can cause instability in closed-loop control schemes \cite{clik_delay}.
+Recent advancements in deep imitation learning (IL), reinforcement learning (RL), and task abstraction have significantly expanded the boundaries of robotic dexterity in simulation \cite{force_optimization, humanmimic, visual_policy_clutter}. However, transferring these policies to real hardware (Sim-to-Real) remains difficult due to discrepancies in contact friction, joint latency, and perception noise \cite{sim2real_survey, contact_survey}. Furthermore, time-varying communication latencies over network interfaces (e.g., Wi-Fi, Ethernet) introduce packet dropouts and non-differentiable network jitter, which can cause instability in closed-loop control schemes \cite{haptic_delay_lkf}.
 
 To address these challenges, we propose a digital twin-driven offline-to-online framework. The virtual twin in NVIDIA Isaac Sim runs physics-based simulations to generate valid catching trajectories. These trajectories are then executed by the physical UR5 arm and DH Robotics dexterous hand. By decoupling the online execution from complex simulation training (offline-to-online replay), we minimize real-world computation latency and ensure stable operational safety. Our framework leverages high-speed GPU-accelerated motion planning to dynamically adapt to trajectory variations.
 
@@ -82,7 +82,7 @@ In teleoperated and co-controlled digital twins, network delay introduces time-v
 \begin{equation}
 \dot{\mathbf{e}}(t) = -\mathbf{K}_p \mathbf{e}(t) - \mathbf{K}_d \mathbf{e}(t - h(t))
 \end{equation}
-To prove Input-to-State Stability (ISS) under bounded delay $0 \le h(t) \le h_m$ and delay derivative $\dot{h}(t) \le d < 1$, we define a Lyapunov-Krasovskii Functional (LKF) \cite{clik_delay}:
+To prove Input-to-State Stability (ISS) under bounded delay $0 \le h(t) \le h_m$ and delay derivative $\dot{h}(t) \le d < 1$, we define a Lyapunov-Krasovskii Functional (LKF) \cite{haptic_delay_lkf}:
 \begin{equation}
 V(t) = \mathbf{e}^T(t) \mathbf{P} \mathbf{e}(t) + \int_{t-h(t)}^{t} \mathbf{e}^T(s) \mathbf{Q} \mathbf{e}(s) ds + \int_{-h_m}^{0} \int_{t+\theta}^{t} \dot{\mathbf{e}}^T(s) \mathbf{R} \dot{\mathbf{e}}(s) ds d\theta
 \end{equation}
@@ -96,8 +96,6 @@ Upon contact with the ball, the joints of the multi-fingered hand are modeled us
 where $\boldsymbol{\theta}_d$ and $\boldsymbol{\theta}$ represent target and actual finger joint angles, $\mathbf{K}_{\theta}$ and $\mathbf{D}_{\theta}$ are virtual stiffness and damping matrices, $\mathbf{J}_h$ is the hand contact Jacobian, and $\mathbf{f}_{\text{ext}}$ is the contact force vector estimated via motor current measurements.
 
 \section{Proposed Framework and DRL-Based Compliance Adaptation}
-To achieve reliable mid-air catching without the object rebounding off the hand, we propose a hybrid control scheme. While the macro-motion of the UR5 arm is governed by cuRobo's deterministic planning and the delay-robust CLIK controller, the micro-impedance parameter matrix $\mathbf{K}_{\theta}(t)$ of the dexterous hand is dynamically modulated by a Deep Reinforcement Learning (DRL) agent.
-
 \subsection{DRL Formulation for Soft Grasping Adaptation}
 Because the 5-fingered DH Robotics hand is underactuated (driven by tendon cables where 5 motors drive 15 joints), we map the joint-space stiffness $\mathbf{K}_\theta$ to the actuated motor space $\mathbf{K}_a$ using the transmission Jacobian $\mathbf{S}$:
 \begin{equation}
@@ -161,14 +159,14 @@ This paper presented a digital twin-driven offline-to-online framework for dynam
 
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{99}
-\bibitem{salisbury_hand} J. K. Salisbury and J. J. Craig, ``Articulated hands: Force control and kinematic issues,'' *Int. J. Robot. Res.*, vol. 1, no. 1, pp. 4--17, 1982.
-\bibitem{mason_hand} M. T. Mason and J. K. Salisbury, ``Robot hands and the mechanics of manipulation,'' *IEEE Trans. Autom. Control*, vol. 31, pp. 879--880, 1986.
-\bibitem{okamura_hand} A. Okamura, N. Smaby, and M. Cutkosky, ``An overview of dexterous manipulation,'' in *ICRA*, 2000, pp. 255--262.
-\bibitem{dapg} A. Rajeswaran et al., ``Learning complex dexterous manipulation with deep reinforcement learning and demonstrations,'' in *RSS*, 2018.
-\bibitem{gail} J. Ho and S. Ermon, ``Generative adversarial imitation learning,'' in *NeurIPS*, 2016.
+\bibitem{trx_hand5} S. Yang et al., ``TRX-Hand5: An anthropomorphic hand with integrated tactile feedback for grasping and manipulation in human environments,'' in *IROS*, 2024, pp. 5289--5296.
+\bibitem{dexco_hand} J. Zhou, J. Huang, Dou, Q., P. Abbeel, and Y. Liu, ``A dexterous and compliant (DexCo) hand based on soft hydraulic actuation for human-inspired fine in-hand manipulation,'' *IEEE Transactions on Robotics*, vol. 41, pp. 666--686, 2024.
+\bibitem{manufacturing_hand_review} J. Zhang et al., ``Dexterous hand towards intelligent manufacturing: A review of technologies, trends, and potential applications,'' *Robotics and Computer-Integrated Manufacturing*, vol. 95, p. 103021, 2025.
+\bibitem{force_optimization} X. Zhou, B. Yu, Y. Mao, K. Yang, S. Cai, and G. Bao, ``Grasp force optimization in the design of a humanoid dexterous hand fingertips,'' in *ROBIO*, 2022, pp. 790--796.
+\bibitem{humanmimic} A. Tang et al., ``Humanmimic: Learning natural locomotion and transitions for humanoid robot via wasserstein adversarial imitation,'' in *ICRA*, 2024, pp. 13107--13114.
 \bibitem{sim2real_survey} A. Pitkevich and I. Makarov, ``A survey on sim-to-real transfer methods for robotic manipulation,'' in *SISY*, 2024, pp. 259--266.
 \bibitem{contact_survey} T. Tsuji et al., ``A survey on imitation learning for contact-rich tasks in robotics,'' *arXiv preprint arXiv:2506.13498*, 2025.
-\bibitem{clik_delay} T. B. Tran, T. T. Bui, H. T. N. Le, and H. Q. T. Ngo, ``Delay-Robust Closed-Loop Inverse Kinematics Control for Unified 25-DoF Arm-Hand Dexterous Teleoperation Systems,'' *IEEE Transactions on Robotics*, vol. 42, no. 3, pp. 1515--1528, 2026.
+\bibitem{haptic_delay_lkf} Y. Liu, D. Xiong, L. Wang, and C.-K. Zhang, ``Stability Analysis of Haptic Systems With Time-Varying Delay via a Delay-Product-Type Lyapunov–Krasovskii Functional,'' *IEEE Transactions on Circuits and Systems II: Express Briefs*, vol. 69, no. 11, pp. 4339--4343, 2022.
 \bibitem{dexgraspnet} R. Wang, J. Zhang, J. Chen, Y. Xu, P. Li, T. Liu, and H. Wang, ``DexGraspNet: A Large-Scale Robotic Dexterous Grasp Dataset in Simulation,'' in *Proceedings of the IEEE International Conference on Robotics and Automation (ICRA)*, 2023, pp. 11359--11366.
 \bibitem{dexcap} C. Wang et al., ``DexCap: Scalable and Portable Mocap Data Collection System for Dexterous Manipulation,'' in *RSS*, 2024.
 \bibitem{robotickinesis} A. Sivakumar et al., ``Robotic telekinesis: Learning a robotic hand imitator by watching humans on youtube,'' in *RSS*, 2022.
@@ -188,7 +186,6 @@ This paper presented a digital twin-driven offline-to-online framework for dynam
 \bibitem{bimanual_demonstrations} B. Zhou, H. Yuan, Y. Fu, and Z. Lu, ``Learning diverse bimanual dexterous manipulation skills from human demonstrations,'' *arXiv preprint arXiv:2410.02477*, 2024.
 \bibitem{watch_and_act} S. Yang et al., ``Watch and act: Learning robotic manipulation from visual demonstration,'' *IEEE Trans. Syst., Man, Cybern., Syst.*, vol. 53, no. 7, pp. 4404--4416, 2023.
 \bibitem{polytask} S. Haldar and L. Pinto, ``PolyTask: Learning unified policies through behavior distillation,'' *arXiv preprint arXiv:2310.08573*, 2023.
-\bibitem{fusion_transformer} Y. Liu et al., ``Fusion-perception-to-action transformer: Enhancing robotic manipulation with 3d visual fusion attention and proprioception,'' *IEEE Trans. Robot.*, vol. 41, pp. 1553--1567, 2025.
 \bibitem{hybrid_hybrid_assembly} J. Sun et al., ``Hierarchical hybrid learning for long-horizon contact-rich robotic assembly,'' *arXiv preprint arXiv:2409.16451*, 2024.
 \end{thebibliography}
 
