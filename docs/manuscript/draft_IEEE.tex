@@ -1,11 +1,14 @@
 \documentclass[letterpaper,journal]{IEEEtran}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
+\usepackage{algorithm}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
 
 \begin{document}
 
@@ -84,7 +87,7 @@ Zeng et al. \cite{transporter_net} & Robot arms & Transporter Networks & Visual 
 Xie et al. \cite{bimanual_manipulation} & Dual-arm manipulator & Deep Imitation Learning & Bimanual coordination & Action space synchronization \\ \hline
 Wang et al. \cite{visual_policy_clutter} & Robot Arm + Camera & Hierarchical Visual Policy & Cluttered Manipulation & Visual spatial planning \\ \hline
 Wan et al. \cite{lotus_continual} & Robot Arm + Gripper & Continual Imitation Learning & Multi-task manipulation & Unsupervised skill discovery \\ \hline
-Zhou et al. \cite{bimanual_demonstrations} & Bimanual arms + Hand & Diverse Imitation Learning & Bimanual dexterous tasks & Demonstration scaling \\ \hline
+Zhou et al. \cite{bimanual_demonstrations} & Bimanual arms + Hand & Diverse Imitation Learning & Bimanual  dexterous tasks & Demonstration scaling \\ \hline
 Yang et al. \cite{watch_and_act} & Robot Arm & Visual Demonstration IL & Visual Manipulation & Vision-to-action mapping \\ \hline
 Haldar et al. \cite{polytask} & Bimanual Arm + Gripper & Behavior Distillation & Multi-task Manipulation & Policy compression \\ \hline
 Liu et al. \cite{fusion_transformer} & Arm-Hand Manipulator & Visual Attention Transformer & Perception-to-action & Visual-Proprioceptive fusion \\ \hline
@@ -140,6 +143,45 @@ Upon contact with the ball, the joints of the multi-fingered hand are modeled us
 where $\boldsymbol{\theta}_d$ and $\boldsymbol{\theta}$ represent target and actual finger joint angles, $\mathbf{K}_{\theta}$ and $\mathbf{D}_{\theta}$ are virtual stiffness and damping matrices, $\mathbf{J}_h$ is the hand contact Jacobian, and $\mathbf{f}_{\text{ext}}$ is the contact force vector estimated via motor current measurements.
 
 \section{Proposed Framework and DRL-Based Compliance Adaptation}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[auto, node distance=1.5cm, >=latex']
+    % Styles
+    \tikzstyle{block} = [draw, rectangle, fill=blue!10, text width=3.8cm, text centered, minimum height=1cm, rounded corners]
+    \tikzstyle{cloud} = [draw, ellipse, fill=red!10, text width=2.5cm, text centered, minimum height=1cm]
+    \tikzstyle{hardware} = [draw, rectangle, fill=green!15, text width=3.5cm, text centered, minimum height=1.2cm, line width=1pt]
+    \tikzstyle{line} = [draw, ->, thick]
+
+    % Nodes
+    \node [cloud] (perception) {3D Vision System (Camera)};
+    \node [block, right=1cm of perception] (ekf) {EKF Trajectory Predictor\\$\ddot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}) + \mathbf{g}$};
+    \node [block, right=1.2cm of ekf] (curobo) {cuRobo Motion Planner\\(Fast GPU Trajectory)};
+    \node [block, below=1cm of curobo] (clik) {Delay-Robust CLIK\\LKF Delay-Compensated};
+    \node [hardware, left=1.2cm of clik] (ur5) {UR5 Arm Actuator\\(Macro Joint Tracking)};
+
+    \node [block, below=2.5cm of perception] (drl) {DRL Stiffness Policy\\(PPO Adapter)};
+    \node [block, right=1.2cm of drl] (impedance) {Actuated Joint Impedance\\$\mathbf{K}_a = \mathbf{S}^T \mathbf{K}_\theta \mathbf{S}$};
+    \node [hardware, right=1.2cm of impedance] (hand) {5-Finger DH Hand\\(Micro Grasp Enclosure)};
+
+    % Connections
+    \path [line] (perception) -- (ekf);
+    \path [line] (ekf) -- node [above] {$\mathbf{x}_{\text{intercept}}$} (curobo);
+    \path [line] (curobo) -- node [right] {$\mathbf{q}_d$} (clik);
+    \path [line] (clik) -- node [above] {$\dot{\mathbf{q}}$ (RTDE)} (ur5);
+
+    \path [line] (perception) |- (drl);
+    \path [line] (drl) -- node [above] {$\Delta \mathbf{K}_a$} (impedance);
+    \path [line] (impedance) -- node [above] {$\boldsymbol{\tau}_j$ (Modbus)} (hand);
+    
+    % Feedback loop
+    \path [line] (hand) |- node [left, pos=0.8] {$\mathbf{f}_{\text{ext}}, \boldsymbol{\theta}$} (drl);
+    
+\end{tikzpicture}
+\caption{System architecture and control dataflow diagram of the proposed digital twin-driven catches framework.}
+\label{fig:block_diagram}
+\end{figure*}
+
 \subsection{DRL Formulation for Soft Grasping Adaptation}
 Because the 5-fingered DH Robotics hand is underactuated (driven by tendon cables where 5 motors drive 15 joints), we map the joint-space stiffness $\mathbf{K}_\theta$ to the actuated motor space $\mathbf{K}_a$ using the transmission Jacobian $\mathbf{S}$:
 \begin{equation}
@@ -173,6 +215,34 @@ where $\psi(t)$ is a smooth scaling profile. The DRL policy dynamically superimp
 
 \subsection{Sim-to-Real Policy Transfer and Latency Compensation}
 The compliance policy is trained offline in Isaac Sim using parallel rollouts. To ensure robustness to real-world communication delays, domain randomization is applied to the observation latencies during training, matching the maximum allowable delay bound $h_m = 32\,\text{ms}$ calculated via the LMI constraints. The physical control loop runs asynchronously: the UR5 RTDE commands run at $500\,\text{Hz}$ to ensure smooth path tracking, while the DH Hand receives stiffness targets via Modbus TCP at $50\,\text{Hz}$ for secondary target modulation.
+
+The overall control sequence is formalized in Algorithm~\ref{alg:catching_control}.
+
+\begin{algorithm}[h]
+\caption{Digital Twin-Driven Dynamic Catching and Compliance Control}
+\label{alg:catching_control}
+\begin{algorithmic}[1]
+\REQUIRE Simulated time-varying delay bound $h_m$, pre-grasp static configuration $q_{\text{static}}$ from DexGraspNet.
+\ENSURE Singularity-robust UR5 joint velocity commands $\dot{\mathbf{q}}$, DH Hand motor stiffness modulation commands $\Delta \mathbf{K}_a$.
+\STATE Initialize EKF states $\mathbf{s}_0$, UR5 starting joints $\mathbf{q}_0$, and DH hand configuration $\boldsymbol{\theta}_0$.
+\WHILE{System runs online}
+    \STATE Read current visual ball position $\mathbf{x}_{\text{ball}}(t)$ and update EKF equations (13)-(14).
+    \STATE Predict interception point $\mathbf{x}_{\text{intercept}}$ and expected contact time $T_{\text{catch}}$.
+    \IF{$t < T_{\text{catch}}$}
+        \STATE Compute macro UR5 path target using cuRobo parallel GPU planner.
+        \STATE Calculate joint target velocities using delay-robust CLIK:
+        \STATE $\dot{\mathbf{q}}(t) = \mathbf{J}^* \mathbf{v} - \mathbf{K}_p \mathbf{e}(t) - \mathbf{K}_d \mathbf{e}(t - h(t))$
+        \STATE Send $\dot{\mathbf{q}}(t)$ commands to UR5 controller via RTDE at $500\,\text{Hz}$.
+    \ENDIF
+    \STATE Read current hand states $\boldsymbol{\theta}(t)$ and estimated contact force $\mathbf{f}_{\text{ext}}(t-1)$.
+    \STATE Query DRL compliance adapter policy $\pi_{\text{PPO}}(\mathbf{s}_t)$ to generate active stiffness offsets $\Delta \mathbf{K}_a(t)$.
+    \STATE Compute final actuated compliance stiffness matrices:
+    \STATE $\mathbf{K}_a(t) = \mathbf{K}_{a, 0} + \text{diag}(\Delta \mathbf{K}_a(t))$
+    \STATE Translate $\mathbf{K}_a$ to joint space torque targets $\boldsymbol{\tau}_j(t)$ using (12).
+    \STATE Send torque and position targets to DH Hand via Modbus TCP at $50\,\text{Hz}$.
+\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
 
 \section{Experimental Evaluation}
 To evaluate the proposed framework, three test cases were executed using a physical 6-DoF UR5 arm and a 5-fingered DH Robotics hand. Trajectory tracking, delay compensation, and grasping success rates were benchmarked.

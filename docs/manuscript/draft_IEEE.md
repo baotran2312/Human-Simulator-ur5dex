@@ -49,7 +49,7 @@ To position our proposed digital twin catching system in the context of existing
 | Yang et al. [1] | TRX-Hand5 (13-DoF) | Active Cable Control | Human-environment Grasp | Proprioceptive Tension Sensing |
 | Zhou et al. [2] | DexCo Hand (3-finger) | Soft Hydraulic Actuation | Fine In-hand Manipulation | Joint stiffness ROS package |
 | Zhang et al. [3] | Survey / Multi-hand | Structured/perceptual | Intelligent Manufacturing | Comprehensive review of challenges |
-| Zhou et al. [4] | Humanoid Dexterous Hand | Grasp Force Optimization | Ten Common Grasp Postures | Experimental grasp verification |
+| Zhou et [4] | Humanoid Dexterous Hand | Grasp Force Optimization | Ten Common Grasp Postures | Experimental grasp verification |
 | Tang et al. [5] | Humanoid JAXON | Wasserstein Adversarial IL | Locomotion & Transitions | Simulator domain randomization |
 | Pitkevich et al. [6] | Survey | Deep RL / Imitation | Tabletop Manipulation | Sim-to-Real adaptation review |
 | Tsuji et al. [7] | Survey | Imitation Learning | Contact-rich Assembly | Review of tactile/force compliance |
@@ -71,7 +71,7 @@ To position our proposed digital twin catching system in the context of existing
 | Xie et al. [23] | Dual-arm manipulator | Deep Imitation Learning | Bimanual coordination | Action space synchronization |
 | Wang et al. [24] | Robot Arm + Camera | Hierarchical Visual Policy | Cluttered Manipulation | Visual spatial planning |
 | Wan et al. [25] | Robot Arm + Gripper | Continual Imitation Learning | Multi-task manipulation | Unsupervised skill discovery |
-| Zhou et al. [26] | Bimanual arms + Hand | Diverse Imitation Learning | Bimanual dexterous tasks | Demonstration scaling |
+| Zhou et [26] | Bimanual arms + Hand | Diverse Imitation Learning | Bimanual dexterous tasks | Demonstration scaling |
 | Yang et al. [27] | Robot Arm | Visual Demonstration IL | Visual Manipulation | Vision-to-action mapping |
 | Haldar et al. [28] | Bimanual Arm + Gripper | Behavior Distillation | Multi-task Manipulation | Policy compression |
 | Liu et al. [29] | Arm-Hand Manipulator | Visual Attention Transformer | Perception-to-action | Visual-Proprioceptive fusion |
@@ -132,6 +132,19 @@ where $\boldsymbol{\theta}_d$ and $\boldsymbol{\theta}$ represent target and act
 ## IV. Proposed Framework and DRL-Based Compliance Adaptation
 To achieve reliable mid-air catching without the object rebounding off the hand, we propose a hybrid control scheme. While the macro-motion of the UR5 arm is governed by cuRobo's deterministic planning and the delay-robust CLIK controller, the micro-impedance parameter matrix $\mathbf{K}_{\theta}(t)$ of the dexterous hand is dynamically modulated by a Deep Reinforcement Learning (DRL) agent.
 
+```mermaid
+graph TD
+    A[3D Vision Camera] --> B[EKF Trajectory Predictor]
+    B -->|x_intercept| C[cuRobo Motion Planner]
+    C -->|q_d| D[Delay-Robust CLIK Controller]
+    D -->|q_dot RTDE 500Hz| E[UR5 Arm Actuator]
+
+    A --> F[DRL Compliance Policy PPO]
+    F -->|delta K_a| G[Impedance Controller]
+    G -->|tau_j Modbus 50Hz| H[5-Finger DH Hand]
+    H -->|feedback f_ext, theta| F
+```
+
 ### A. DRL Formulation for Soft Grasping Adaptation
 Because the 5-fingered DH Robotics hand is underactuated (driven by tendon cables where 5 motors drive 15 joints), we map the joint-space stiffness $\mathbf{K}_\theta$ to the actuated motor space $\mathbf{K}_a$ using the transmission Jacobian $\mathbf{S}$:
 
@@ -158,6 +171,31 @@ where $\psi(t)$ is a smooth scaling profile. The DRL policy dynamically superimp
 
 ### C. Sim-to-Real Policy Transfer and Latency Compensation
 The compliance policy is trained offline in Isaac Sim using parallel rollouts. To ensure robustness to real-world communication delays, domain randomization is applied to the observation latencies during training, matching the maximum allowable delay bound $h_m = 32\,\text{ms}$ calculated via the LMI constraints. The physical control loop runs asynchronously: the UR5 RTDE commands run at $500\,\text{Hz}$ to ensure smooth path tracking, while the DH Hand receives stiffness targets via Modbus TCP at $50\,\text{Hz}$ for secondary target modulation.
+
+### D. Proposed Hybrid Catching Control Flow
+The overall control sequence is formalized in the algorithm below:
+
+#### Algorithm 1: Digital Twin-Driven Dynamic Catching and Compliance Control
+* **Input**: Simulated time-varying delay bound $h_m$, pre-grasp static configuration $q_{\text{static}}$ from DexGraspNet.
+* **Output**: Singularity-robust UR5 joint velocity commands $\dot{\mathbf{q}}$, DH Hand motor stiffness modulation commands $\Delta \mathbf{K}_a$.
+
+1. Initialize EKF states $\mathbf{s}_0$, UR5 starting joints $\mathbf{q}_0$, and DH hand configuration $\boldsymbol{\theta}_0$.
+2. **while** System runs online **do**
+3. $\quad$ Read current visual ball position $\mathbf{x}_{\text{ball}}(t)$ and update EKF equations.
+4. $\quad$ Predict interception point $\mathbf{x}_{\text{intercept}}$ and expected contact time $T_{\text{catch}}$.
+5. $\quad$ **if** $t < T_{\text{catch}}$ **then**
+6. $\quad\quad$ Compute macro UR5 path target using cuRobo parallel GPU planner.
+7. $\quad\quad$ Calculate joint target velocities using delay-robust CLIK:
+8. $\quad\quad$ $\dot{\mathbf{q}}(t) = \mathbf{J}^* \mathbf{v} - \mathbf{K}_p \mathbf{e}(t) - \mathbf{K}_d \mathbf{e}(t - h(t))$
+9. $\quad\quad$ Send $\dot{\mathbf{q}}(t)$ commands to UR5 controller via RTDE at $500\,\text{Hz}$.
+10. $\quad$ **end if**
+11. $\quad$ Read current hand states $\boldsymbol{\theta}(t)$ and estimated contact force $\mathbf{f}_{\text{ext}}(t-1)$.
+12. $\quad$ Query DRL compliance adapter policy $\pi_{\text{PPO}}(\mathbf{s}_t)$ to generate active stiffness offsets $\Delta \mathbf{K}_a(t)$.
+13. $\quad$ Compute final actuated compliance stiffness matrices:
+14. $\quad$ $\mathbf{K}_a(t) = \mathbf{K}_{a, 0} + \text{diag}(\Delta \mathbf{K}_a(t))$
+15. $\quad$ Translate $\mathbf{K}_a$ to joint space torque targets $\boldsymbol{\tau}_j(t)$ using transmission Jacobian $\mathbf{S}$.
+16. $\quad$ Send torque and position targets to DH Hand via Modbus TCP at $50\,\text{Hz}$.
+17. **end while**
 
 ---
 
