@@ -40,6 +40,44 @@ Dynamic catching requires fast perception and control. Classical approaches rely
 ### C. Digital Twins and Sim-to-Real Synchronization
 Digital twins provide a bi-directional data flow between the virtual and physical spaces. Using middlewares like ROS 2 and lightweight communication brokers, contemporary systems synchronize simulated joint states with physical encoders. Teleoperation systems like AnyTeleop [17] map human hands to robot configurations in real time, though they are highly sensitive to transmission delays. To overcome covariate shift and integration errors, waypoint-based imitation learning [18] and diffusion policies [19, 21] have been proposed to generate smooth trajectories from sparse demonstrations [20, 29].
 
+### D. State-of-the-Art Comparative Summary
+To position our proposed digital twin catching system in the context of existing literature, Table I summarizes and compares the key characteristics of state-of-the-art dexterous grasping and manipulation frameworks.
+
+#### Table I: State-of-the-Art (SOTA) Comparison of Dexterous Grasping and Manipulation Systems
+| Work | Platform / Hand | Control Mode | Primary Task | Sim-to-Real / Delay Handling |
+| :--- | :--- | :--- | :--- | :--- |
+| Yang et al. [1] | TRX-Hand5 (13-DoF) | Active Cable Control | Human-environment Grasp | Proprioceptive Tension Sensing |
+| Zhou et al. [2] | DexCo Hand (3-finger) | Soft Hydraulic Actuation | Fine In-hand Manipulation | Joint stiffness ROS package |
+| Zhang et al. [3] | Survey / Multi-hand | Structured/perceptual | Intelligent Manufacturing | Comprehensive review of challenges |
+| Zhou et al. [4] | Humanoid Dexterous Hand | Grasp Force Optimization | Ten Common Grasp Postures | Experimental grasp verification |
+| Tang et al. [5] | Humanoid JAXON | Wasserstein Adversarial IL | Locomotion & Transitions | Simulator domain randomization |
+| Pitkevich et al. [6] | Survey | Deep RL / Imitation | Tabletop Manipulation | Sim-to-Real adaptation review |
+| Tsuji et al. [7] | Survey | Imitation Learning | Contact-rich Assembly | Review of tactile/force compliance |
+| Liu et al. [8] | Haptic Master-Slave | Delay-Product LKF Control | Bilateral Tracking | Lyapunov-Krasovskii functional |
+| Wang et al. [9] | DexGraspNet | GPU-accelerated Synthesizer | Large-Scale Grasp Dataset | Isaac Gym simulation (No hardware) |
+| Handa et al. [10] | Allegro Hand (16-DoF) | Deep RL (PPO) | In-hand Reorientation | Domain randomization (Sim-to-Real) |
+| Wang et al. [11] | Allegro Hand + Mocap | BCRL (Behavior Cloning) | Daily Grasping Tasks | Real-world teleoperation replay |
+| Sivakumar et al. [12] | Allegro Hand (16-DoF) | Vision-based BC | In-hand Reorientation | Zero-Shot Imitation from Youtube |
+| Arunachalam et al. [13] | Allegro Hand (16-DoF) | DAPG + KNN (VINN/INN) | Flipping, spinning, rotating | Easy teleoperation collection |
+| Xu et al. [14] | Allegro on 7-DoF Arm | Autonomous Multi-task RL | Scrubbing, plugging, looping | Image milestones and VICE |
+| Yin et al. [15] | Allegro Hand + Tactile | Tactile-based RL policy | Blind In-hand Rotation | Real-world tactile-to-real policy |
+| Sundaralingam et al. [16] | Redundant arm systems | Parallelized GPU Planner | Reactive Motion Generation | Sub-5ms reactive collision avoidance |
+| Sleiman et al. [17] | Quadruped manipulator | Whole-Body MPC (SLQ) | Dynamic Locomotion/manip. | Real-time predictive control |
+| Qin et al. [18] | Shadow, Allegro, Leap | Kinematic Retargeting Solver | Multi-hand Teleoperation | Visual mapping (No delay handling) |
+| Shi et al. [19] | Franka Arm | Waypoint-based Imitation | Fine Manipulation tasks | Sparse Demonstration interpolation |
+| Chi et al. [20] | Bimanual arm setups | Visuomotor Action Diffusion | Deformable object manipulation | Replay buffer with real-world test |
+| Grannen et al. [21] | Bimanual robot arms | Coordinated Imitation | Bimanual collaborative tasks | Dynamic stabilization |
+| Zeng et al. [22] | Robot arms | Transporter Networks | Visual Rearrangement | Visual spatial invariance |
+| Xie et al. [23] | Dual-arm manipulator | Deep Imitation Learning | Bimanual coordination | Action space synchronization |
+| Wang et al. [24] | Robot Arm + Camera | Hierarchical Visual Policy | Cluttered Manipulation | Visual spatial planning |
+| Wan et al. [25] | Robot Arm + Gripper | Continual Imitation Learning | Multi-task manipulation | Unsupervised skill discovery |
+| Zhou et al. [26] | Bimanual arms + Hand | Diverse Imitation Learning | Bimanual dexterous tasks | Demonstration scaling |
+| Yang et al. [27] | Robot Arm | Visual Demonstration IL | Visual Manipulation | Vision-to-action mapping |
+| Haldar et al. [28] | Bimanual Arm + Gripper | Behavior Distillation | Multi-task Manipulation | Policy compression |
+| Liu et al. [29] | Arm-Hand Manipulator | Visual Attention Transformer | Perception-to-action | Visual-Proprioceptive fusion |
+| Sun et al. [30] | UR10e + Multi-fingered hand | Hierarchical hybrid learning | Contact-rich assembly | Sim-to-Real (PPO + CPPF++) |
+| **Proposed Work** | **UR5 Arm + 5-fingered DH** | **cuRobo + CLIK + DRL** | **Dynamic Catching** | **LKF delay compensation + DRL adaptation** |
+
 ---
 
 ## III. Preliminaries
@@ -133,9 +171,9 @@ In the first case, the robot arm remained stationary while the ball was dropped 
 In the second case, the ball was thrown with a velocity of $v_0 = 3.5\,\text{m/s}$ at an angle, requiring the UR5 arm to perform fast interception planning. The cuRobo solver planned obstacle-free paths in $4.2\,\text{ms}$. The EKF trajectory predictor successfully estimated the intercept point with a mean spatial prediction error of $3.5 \pm 0.6\,\text{mm}$. Over $50$ trial runs, the robot achieved a catching success rate of $92.0\%$ ($46$ successful catches). Analysis of the $4$ failed runs revealed that $2$ failures were due to sudden lighting changes causing visual tracking dropout, while the other $2$ failures resulted from the ball trajectory exceeding the physical kinematic reach limits of the UR5 arm.
 
 ### C. Case 3: Playback and Co-Control under Communication Delays
-In the third case, the planned trajectories were replayed under simulated time-varying communication delays over $50$ trials. To evaluate our delay-robust CLIK controller, we re-implemented the standard AnyTeleop [17] baseline under the identical simulated latency of $h_m = 32\,\text{ms}$. As shown in Table I, AnyTeleop suffered from significant control drift and joint oscillations due to lack of delay compensation, whereas our proposed CLIK controller maintained stable tracking.
+In the third case, the planned trajectories were replayed under simulated time-varying communication delays over $50$ trials. To evaluate our delay-robust CLIK controller, we re-implemented the standard AnyTeleop [17] baseline under the identical simulated latency of $h_m = 32\,\text{ms}$. As shown in Table II, AnyTeleop suffered from significant control drift and joint oscillations due to lack of delay compensation, whereas our proposed CLIK controller maintained stable tracking.
 
-#### Table I: Trajectory Tracking Errors under Delay ($h_m = 32\,\text{ms}$)
+#### Table II: Trajectory Tracking Errors under Delay ($h_m = 32\,\text{ms}$)
 | Method | MAE (mm) | RMSE (mm) | Success Rate |
 | :--- | :---: | :---: | :---: |
 | AnyTeleop [17] | $28.4 \pm 4.2$ | $32.1 \pm 5.1$ | 74.0% |
@@ -158,23 +196,27 @@ This paper presented a digital twin-driven offline-to-online framework for dynam
 * **[7]** T. Tsuji et al., "A survey on imitation learning for contact-rich tasks in robotics," *arXiv preprint arXiv:2506.13498*, 2025.
 * **[8]** Y. Liu, D. Xiong, L. Wang, and C.-K. Zhang, "Stability Analysis of Haptic Systems With Time-Varying Delay via a Delay-Product-Type Lyapunov–Krasovskii Functional," *IEEE Transactions on Circuits and Systems II: Express Briefs*, vol. 69, no. 11, pp. 4339–4343, 2022.
 * **[9]** R. Wang, J. Zhang, J. Chen, Y. Xu, P. Li, T. Liu, and H. Wang, "DexGraspNet: A Large-Scale Robotic Dexterous Grasp Dataset in Simulation," in *Proceedings of the IEEE International Conference on Robotics and Automation (ICRA)*, 2023, pp. 11359–11366.
-* **[10]** C. Wang et al., "DexCap: Scalable and Portable Mocap Data Collection System for Dexterous Manipulation," in *RSS*, 2024.
-* **[11]** A. Sivakumar et al., "Robotic telekinesis: Learning a robotic hand imitator by watching humans on youtube," in *RSS*, 2022.
-* **[12]** S. P. Arunachalam et al., "Dexterous imitation made easy: A learning-based framework for efficient dexterous manipulation," in *ICRA*, 2023, pp. 5954–5961.
-* **[13]** K. Xu et al., "Dexterous manipulation from images: Autonomous real-world rl via substep guidance," in *ICRA*, 2023, pp. 5938–5945.
-* **[14]** Z.-H. Yin et al., "Rotating without seeing: Towards in-hand dexterity through touch," in *RSS*, 2023.
-* **[15]** B. Sundaralingam et al., "cuRobo: Parallelized Motion Generation on the GPU," in *ICRA*, 2023.
-* **[16]** J.-P. Sleiman et al., "A unified mpc framework for whole-body dynamic locomotion and manipulation," *IEEE Robot. Autom. Lett.*, vol. 6, no. 3, pp. 4688–4695, 2021.
-* **[17]** Y. Qin et al., "AnyTeleop: A general vision-based dexterous robot arm-hand teleoperation system," in *RSS*, 2023.
-* **[18]** L. X. Shi et al., "Waypoint-based imitation learning for robotic manipulation," in *CoRL*, 2023, pp. 2195–2209.
-* **[19]** C. Chi et al., "Diffusion policy: Visuomotor policy learning via action diffusion," *Int. J. Robot. Res.*, 2023.
-* **[20]** J. Grannen et al., "Stabilize to act: Learning to coordinate for bimanual manipulation," in *CoRL*, 2023, pp. 563–576.
-* **[21]** A. Zeng et al., "Transporter networks: Rearranging the visual world for robotic manipulation," in *CoRL*, 2021, pp. 726–747.
-* **[22]** F. Xie et al., "Deep imitation learning for bimanual robotic manipulation," in *NeurIPS*, 2020, pp. 2327–2337.
-* **[23]** H. Wang et al., "Hierarchical visual policy learning for long-horizon robot manipulation in densely cluttered scenes," in *ICRA*, 2025, pp. 1149–1155.
-* **[24]** W. Wan et al., "LOTUS: Continual imitation learning for robot manipulation through unsupervised skill discovery," in *ICRA*, 2023, pp. 537–544.
-* **[25]** B. Zhou, H. Yuan, Y. Fu, and Z. Lu, "Learning diverse bimanual dexterous manipulation skills from human demonstrations," *arXiv preprint arXiv:2410.02477*, 2024.
-* **[26]** S. Yang et al., "Watch and act: Learning robotic manipulation from visual demonstration," *IEEE Trans. Syst., Man, Cybern., Syst.*, vol. 53, no. 7, pp. 4404–4416, 2023.
-* **[27]** S. Haldar and L. Pinto, "PolyTask: Learning unified policies through behavior distillation," *arXiv preprint arXiv:2310.08573*, 2023.
-* **[28]** Y. Liu et al., "Fusion-perception-to-action transformer: Enhancing robotic manipulation with 3d visual fusion attention and proprioception," *IEEE Trans. Robot.*, vol. 41, pp. 1553–1567, 2025.
-* **[29]** J. Sun et al., "Hierarchical hybrid learning for long-horizon contact-rich robotic assembly," *arXiv preprint arXiv:2409.16451*, 2024.
+* **[10]** A. Handa et al., "DeXtreme: Transfer of agile in-hand manipulation from simulation to reality," in *ICRA*, 2023, pp. 5977–5984.
+* **[11]** C. Wang et al., "DexCap: Scalable and Portable Mocap Data Collection System for Dexterous Manipulation," in *RSS*, 2024.
+* **[12]** A. Sivakumar et al., "Robotic telekinesis: Learning a robotic hand imitator by watching humans on youtube," in *RSS*, 2022.
+* **[13]** S. P. Arunachalam et al., "Dexterous imitation made easy: A learning-based framework for efficient dexterous manipulation," in *ICRA*, 2023, pp. 5954–5961.
+* **[14]** K. Xu et al., "Dexterous manipulation from images: Autonomous real-world rl via substep guidance," in *ICRA*, 2023, pp. 5938–5945.
+* **[15]** Z.-H. Yin et al., "Rotating without seeing: Towards in-hand dexterity through touch," in *RSS*, 2023.
+* **[16]** B. Sundaralingam et al., "cuRobo: Parallelized Motion Generation on the GPU," in *ICRA*, 2023.
+* **[17]** J.-P. Sleiman et al., "A unified mpc framework for whole-body dynamic locomotion and manipulation," *IEEE Robot. Autom. Lett.*, vol. 6, no. 3, pp. 4688–4695, 2021.
+* **[18]** Y. Qin et al., "AnyTeleop: A general vision-based dexterous robot arm-hand teleoperation system," in *RSS*, 2023.
+* **[19]** L. X. Shi et al., "Waypoint-based imitation learning for robotic manipulation," in *CoRL*, 2023, pp. 2195–2209.
+* **[20]** C. Chi et al., "Diffusion policy: Visuomotor policy learning via action diffusion," *Int. J. Robot. Res.*, 2023.
+* **[21]** J. Grannen et al., "Stabilize to act: Learning to coordinate for bimanual manipulation," in *CoRL*, 2023, pp. 563–576.
+* **[22]** A. Zeng et al., "Transporter networks: Rearranging the visual world for robotic manipulation," in *CoRL*, 2021, pp. 726–747.
+* **[23]** F. Xie et al., "Deep imitation learning for bimanual robotic manipulation," in *NeurIPS*, 2020, pp. 2327–2337.
+* **[24]** H. Wang et al., "Hierarchical visual policy learning for long-horizon robot manipulation in densely cluttered scenes," in *ICRA*, 2025, pp. 1149–1155.
+* **[25]** W. Wan et al., "LOTUS: Continual imitation learning for robot manipulation through unsupervised skill discovery," in *ICRA*, 2023, pp. 537–544.
+* **[26]** B. Zhou, H. Yuan, Y. Fu, and Z. Lu, "Learning diverse bimanual dexterous manipulation skills from human demonstrations," *arXiv preprint arXiv:2410.02477*, 2024.
+* **[27]** S. Yang et al., "Watch and act: Learning robotic manipulation from visual demonstration," *IEEE Trans. Syst., Man, Cybern., Syst.*, vol. 53, no. 7, pp. 4404–4416, 2023.
+* **[28]** S. Haldar and L. Pinto, "PolyTask: Learning unified policies through behavior distillation," *arXiv preprint arXiv:2310.08573*, 2023.
+* **[29]** Y. Liu et al., "Fusion-perception-to-action transformer: Enhancing robotic manipulation with 3d visual fusion attention and proprioception," *IEEE Trans. Robot.*, vol. 41, pp. 1553–1567, 2025.
+* **[30]** J. Sun et al., "Hierarchical hybrid learning for long-horizon contact-rich robotic assembly," *arXiv preprint arXiv:2409.16451*, 2024.
+\end{thebibliography}
+
+\end{document}

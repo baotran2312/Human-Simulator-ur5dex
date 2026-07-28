@@ -49,6 +49,50 @@ Dynamic catching requires fast perception and control. Classical approaches rely
 \subsection{Digital Twins and Sim-to-Real Synchronization}
 Digital twins provide a bi-directional data flow between the virtual and physical spaces. Using middlewares like ROS 2 and lightweight communication brokers, contemporary systems synchronize simulated joint states with physical encoders. Teleoperation systems like AnyTeleop \cite{anyteleop} map human hands to robot configurations in real time, though they are highly sensitive to transmission delays. To overcome covariate shift and integration errors, waypoint-based imitation learning \cite{waypoint_il} and diffusion policies \cite{diffusionpolicy, transporter_net} have been proposed to generate smooth trajectories from sparse demonstrations \cite{stabilizetoact, hybrid_hybrid_assembly}.
 
+\subsection{State-of-the-Art Comparative Summary}
+To position our proposed digital twin catching system in the context of existing literature, Table~\ref{tab:sota_comparison} summarizes and compares the key characteristics of state-of-the-art dexterous grasping and manipulation frameworks.
+
+\begin{table*}[t]
+\centering
+\caption{State-of-the-Art (SOTA) Comparison of Dexterous Grasping and Manipulation Systems}
+\label{tab:sota_comparison}
+\begin{tabular}{|l|l|l|l|p{4cm}|}
+\hline
+\textbf{Work} & \textbf{Platform / Hand} & \textbf{Control Mode} & \textbf{Primary Task} & \textbf{Sim-to-Real / Delay Handling} \\ \hline
+Yang et al. \cite{trx_hand5} & TRX-Hand5 (13-DoF) & Active Cable Control & Human-environment Grasp & Proprioceptive Tension Sensing \\ \hline
+Zhou et al. \cite{dexco_hand} & DexCo Hand (3-finger) & Soft Hydraulic Actuation & Fine In-hand Manipulation & Joint stiffness ROS package \\ \hline
+Zhang et al. \cite{manufacturing_hand_review} & Survey / Multi-hand & structured/perceptual & Intelligent Manufacturing & Comprehensive review of challenges \\ \hline
+Zhou et al. \cite{force_optimization} & Humanoid Dexterous Hand & Grasp Force Optimization & Ten Common Grasp Postures & Experimental grasp verification \\ \hline
+Tang et al. \cite{humanmimic} & Humanoid JAXON & Wasserstein Adversarial IL & Locomotion \& Transitions & Simulator domain randomization \\ \hline
+Pitkevich et al. \cite{sim2real_survey} & Survey & Deep RL / Imitation & Tabletop Manipulation & Sim-to-Real adaptation review \\ \hline
+Tsuji et al. \cite{contact_survey} & Survey & Imitation Learning & Contact-rich Assembly & Review of tactile/force compliance \\ \hline
+Liu et al. \cite{haptic_delay_lkf} & Haptic Master-Slave & Delay-Product LKF Control & Bilateral Tracking & Lyapunov-Krasovskii functional \\ \hline
+Wang et al. \cite{dexgraspnet} & DexGraspNet & GPU-accelerated Synthesizer & Large-Scale Grasp Dataset & Isaac Gym simulation (No hardware) \\ \hline
+Handa et al. \cite{dextreme} & Allegro Hand (16-DoF) & Deep RL (PPO) & In-hand Reorientation & Domain randomization (Sim-to-Real) \\ \hline
+Wang et al. \cite{dexcap} & Allegro Hand + Mocap & BCRL (Behavior Cloning) & Daily Grasping Tasks & Real-world teleoperation replay \\ \hline
+Sivakumar et al. \cite{robotickinesis} & Allegro Hand (16-DoF) & Vision-based BC & In-hand Reorientation & Zero-Shot Imitation from Youtube \\ \hline
+Arunachalam et al. \cite{dime} & Allegro Hand (16-DoF) & DAPG + KNN (VINN/INN) & Flipping, spinning, rotating & Easy teleoperation collection \\ \hline
+Xu et al. \cite{avail} & Allegro on 7-DoF Arm & Autonomous Multi-task RL & Scrubbing, plugging, looping & Image milestones and VICE classification \\ \hline
+Yin et al. \cite{rotating_touch} & Allegro Hand + Tactile & Tactile-based RL policy & Blind In-hand Rotation & Real-world tactile-to-real policy \\ \hline
+Sundaralingam et al. \cite{curobo} & Redundant arm systems & Parallelized GPU Planner & Reactive Motion Generation & Sub-5ms reactive collision avoidance \\ \hline
+Sleiman et al. \cite{wholbody_mpc} & Quadruped manipulator & Whole-Body MPC (SLQ) & Dynamic Locomotion/manip. & Real-time predictive control \\ \hline
+Qin et al. \cite{anyteleop} & Shadow, Allegro, Leap & Kinematic Retargeting Solver & Multi-hand Teleoperation & Visual mapping (No delay handling) \\ \hline
+Shi et al. \cite{waypoint_il} & Franka Arm & Waypoint-based Imitation & Fine Manipulation tasks & Sparse Demonstration interpolation \\ \hline
+Chi et al. \cite{diffusionpolicy} & Bimanual arm setups & Visuomotor Action Diffusion & Deformable object manipulation & Replay buffer with real-world test \\ \hline
+Grannen et al. \cite{stabilizetoact} & Bimanual robot arms & Coordinated Imitation & Bimanual collaborative tasks & Dynamic stabilization \\ \hline
+Zeng et al. \cite{transporter_net} & Robot arms & Transporter Networks & Visual Rearrangement & Visual spatial invariance \\ \hline
+Xie et al. \cite{bimanual_manipulation} & Dual-arm manipulator & Deep Imitation Learning & Bimanual coordination & Action space synchronization \\ \hline
+Wang et al. \cite{visual_policy_clutter} & Robot Arm + Camera & Hierarchical Visual Policy & Cluttered Manipulation & Visual spatial planning \\ \hline
+Wan et al. \cite{lotus_continual} & Robot Arm + Gripper & Continual Imitation Learning & Multi-task manipulation & Unsupervised skill discovery \\ \hline
+Zhou et al. \cite{bimanual_demonstrations} & Bimanual arms + Hand & Diverse Imitation Learning & Bimanual dexterous tasks & Demonstration scaling \\ \hline
+Yang et al. \cite{watch_and_act} & Robot Arm & Visual Demonstration IL & Visual Manipulation & Vision-to-action mapping \\ \hline
+Haldar et al. \cite{polytask} & Bimanual Arm + Gripper & Behavior Distillation & Multi-task Manipulation & Policy compression \\ \hline
+Liu et al. \cite{fusion_transformer} & Arm-Hand Manipulator & Visual Attention Transformer & Perception-to-action & Visual-Proprioceptive fusion \\ \hline
+Sun et al. \cite{hybrid_hybrid_assembly} & UR10e + Multi-fingered hand & Hierarchical hybrid learning & Contact-rich assembly & Sim-to-Real (PPO + CPPF++) \\ \hline
+\textbf{Proposed Work} & \textbf{UR5 Arm + 5-fingered DH} & \textbf{cuRobo + CLIK + DRL} & \textbf{Dynamic Catching} & \textbf{LKF delay compensation + DRL adaptation} \\ \hline
+\end{tabular}
+\end{table*}
+
 \section{Preliminaries}
 \subsection{Singularity-Robust Kinematics via Damped Least-Squares}
 For a redundant manipulator like the 6-DoF UR5 arm, the relationship between the joint velocity vector $\dot{\mathbf{q}} \in \mathbb{R}^n$ and the end-effector spatial velocity $\mathbf{v} \in \mathbb{R}^m$ (where $n > m$) is defined via the analytical Jacobian matrix $\mathbf{J}(\mathbf{q}) \in \mathbb{R}^{m \times n}$:
@@ -186,6 +230,7 @@ This paper presented a digital twin-driven offline-to-online framework for dynam
 \bibitem{bimanual_demonstrations} B. Zhou, H. Yuan, Y. Fu, and Z. Lu, ``Learning diverse bimanual dexterous manipulation skills from human demonstrations,'' *arXiv preprint arXiv:2410.02477*, 2024.
 \bibitem{watch_and_act} S. Yang et al., ``Watch and act: Learning robotic manipulation from visual demonstration,'' *IEEE Trans. Syst., Man, Cybern., Syst.*, vol. 53, no. 7, pp. 4404--4416, 2023.
 \bibitem{polytask} S. Haldar and L. Pinto, ``PolyTask: Learning unified policies through behavior distillation,'' *arXiv preprint arXiv:2310.08573*, 2023.
+\bibitem{fusion_transformer} Y. Liu et al., ``Fusion-perception-to-action transformer: Enhancing robotic manipulation with 3d visual fusion attention and proprioception,'' *IEEE Trans. Robot.*, vol. 41, pp. 1553--1567, 2025.
 \bibitem{hybrid_hybrid_assembly} J. Sun et al., ``Hierarchical hybrid learning for long-horizon contact-rich robotic assembly,'' *arXiv preprint arXiv:2409.16451*, 2024.
 \end{thebibliography}
 
