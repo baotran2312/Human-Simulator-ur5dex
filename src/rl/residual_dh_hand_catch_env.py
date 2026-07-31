@@ -48,10 +48,19 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
             },
         ),
         actuators={
-            "all": ImplicitActuatorCfg(
-                joint_names_expr=[".*"],
+            "arm": ImplicitActuatorCfg(
+                joint_names_expr=[".*shoulder.*", ".*elbow.*", ".*wrist.*"],
+                effort_limit=150.0,
+                velocity_limit=3.14,
                 stiffness=400.0,
                 damping=40.0,
+            ),
+            "hand": ImplicitActuatorCfg(
+                joint_names_expr=[".*Link.*"],
+                effort_limit=1.0,
+                velocity_limit=10.0,
+                stiffness=5.0,
+                damping=0.5,
             )
         }
     )
