@@ -10,10 +10,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from isaaclab.app import AppLauncher
 
 # Parse arguments for Isaac Lab
-parser = argparse.ArgumentParser("DH Hand PPO Training with SKRL")
-parser.add_argument("--num_envs", type=int, default=1024, help="Number of environments to spawn.")
+parser = argparse.ArgumentParser("DH Hand PPO Playing with SKRL")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 AppLauncher.add_app_launcher_args(parser)
 args_cli, _ = parser.parse_known_args()
+
+# Force headless to False for visualization
+args_cli.headless = False
 
 # Launch Isaac Sim app before any physics or rendering imports
 app_launcher = AppLauncher(args_cli)
@@ -72,6 +75,16 @@ class Value(DeterministicMixin, Model):
         x = self.net(inputs["states"])
         return self.value_layer(x), {}
 
+def get_latest_checkpoint(log_dir):
+    checkpoints_dir = os.path.join(log_dir, "checkpoints")
+    if not os.path.exists(checkpoints_dir):
+        return None
+    files = [f for f in os.listdir(checkpoints_dir) if f.endswith('.pt')]
+    if not files:
+        return None
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(checkpoints_dir, x)))
+    return os.path.join(checkpoints_dir, files[-1])
+
 def main():
     print("[INFO] Setting up Isaac Lab DirectRLEnv...")
     env_cfg = DHHandCatchEnvCfg()
@@ -79,32 +92,10 @@ def main():
     env = DHHandCatchEnv(cfg=env_cfg)
     
     print("[INFO] Wrapping environment for SKRL...")
-    # SKRL natively supports Isaac Lab environments. Just use wrap_env.
     env_wrapped = wrap_env(env, wrapper="isaaclab")
     
     # Configure PPO Agent
     cfg = PPO_DEFAULT_CONFIG.copy()
-    cfg["rollouts"] = 128
-    cfg["learning_epochs"] = 4
-    cfg["mini_batches"] = 4
-    cfg["discount_factor"] = 0.99
-    cfg["lambda"] = 0.95
-    cfg["learning_rate"] = 1e-3
-    cfg["grad_norm_clip"] = 1.0
-    cfg["ratio_clip"] = 0.2
-    cfg["value_clip"] = 0.2
-    cfg["clip_predicted_values"] = True
-    cfg["entropy_loss_scale"] = 0.0
-    cfg["value_loss_scale"] = 1.0
-    cfg["kl_threshold"] = 0.01
-    
-    # Logging Configuration
-    cfg["experiment"]["directory"] = "logs/skrl/residual_dh_hand_catch"
-    cfg["experiment"]["experiment_name"] = "PPO_Residual_v9"
-    cfg["experiment"]["write_interval"] = 100
-    cfg["experiment"]["checkpoint_interval"] = 500
-    
-    # Ensure device is properly configured in PPO cfg
     cfg["device"] = env.device
     
     # Instantiate Neural Networks
@@ -113,7 +104,7 @@ def main():
     models["value"] = Value(env_wrapped.observation_space, env_wrapped.action_space, env.device)
     
     # Create Memory
-    memory = RandomMemory(memory_size=cfg["rollouts"], num_envs=env_wrapped.num_envs, device=env.device)
+    memory = RandomMemory(memory_size=16, num_envs=env_wrapped.num_envs, device=env.device)
     
     # Create PPO Agent
     agent = PPO(models=models,
@@ -123,13 +114,32 @@ def main():
                 action_space=env_wrapped.action_space,
                 device=env.device)
     
-    # Create Trainer
-    cfg_trainer = {"timesteps": 5000000, "headless": True}
-    trainer = SequentialTrainer(cfg=cfg_trainer, env=env_wrapped, agents=agent)
+    log_dir = "logs/skrl/residual_dh_hand_catch/PPO_Residual_v8"
+    latest_cp = get_latest_checkpoint(log_dir)
+    if latest_cp:
+        print(f"[INFO] Loading checkpoint: {latest_cp}")
+        agent.load(latest_cp)
+    else:
+        print(f"[WARNING] No checkpoint found in {log_dir}!")
+        return
+
+    agent.set_mode("eval")
     
-    print("[INFO] Starting SKRL Training Loop...")
-    trainer.train()
+    print("[INFO] Starting Evaluation Loop...")
+    obs, _ = env_wrapped.reset()
     
+    for i in range(1000):
+        # Act
+        actions = agent.act(obs, timestep=i, timesteps=1000)[0]
+        # Step
+        obs, reward, terminated, truncated, info = env_wrapped.step(actions)
+        
+        # In các thông số quan sát
+        ball_z = env.ball.data.root_pos_w[0, 2].item()
+        palm_z = env.robot.data.body_pos_w[0, env.palm_link_idx, 2].item()
+        action_mean = actions[0].mean().item()
+        print(f"Step {i:03d} | Reward: {reward[0].item():+.4f} | Ball Z: {ball_z:.4f} | Palm Z: {palm_z:.4f} | Action Mean: {action_mean:.4f}")
+        
     env.close()
     simulation_app.close()
 

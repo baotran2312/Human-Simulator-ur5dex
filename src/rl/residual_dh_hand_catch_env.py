@@ -6,6 +6,7 @@ from isaaclab.envs import DirectRLEnv, DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 from isaaclab.assets import ArticulationCfg, RigidObjectCfg
+from isaaclab.sensors import ContactSensorCfg
 
 from isaaclab.actuators import ImplicitActuatorCfg
 
@@ -23,6 +24,7 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
         prim_path="/World/envs/env_.*/UR5DEX",
         spawn=sim_utils.UsdFileCfg(
             usd_path=UR5DEXConfig.usd_asset_path,
+            activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=False,
                 max_depenetration_velocity=10.0,
@@ -58,21 +60,24 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
     ball: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/DynamicBall",
         spawn=sim_utils.SphereCfg(
-            radius=DynamicBallConfig.radius,
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+            radius=0.035,
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(max_depenetration_velocity=10.0),
+            mass_props=sim_utils.MassPropertiesCfg(mass=0.15),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=DynamicBallConfig.mass),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.2, 0.2)),
-            physics_material=sim_utils.RigidBodyMaterialCfg(
-                restitution=0.0,  # Zero bounce
-                static_friction=1.0, # High friction
-                dynamic_friction=1.0
-            )
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.1, 0.8, 0.1)),
+            physics_material=sim_utils.RigidBodyMaterialCfg(restitution=0.0, static_friction=1.0),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
             pos=(0.498, 0.108, 0.8),
             lin_vel=(0.0, 0.0, -0.5),
         ),
+    )
+
+    contact_forces: ContactSensorCfg = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/UR5DEX/DexterousHandBase/.*",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
     )
 
 @configclass
@@ -81,7 +86,8 @@ class DHHandCatchEnvCfg(DirectRLEnvCfg):
     decimation = 2
     episode_length_s = 3.0
     action_space = 5
-    observation_space = 41
+    # ball_pos(3) + ball_vel(3) + palm_pos(3) + joint_pos(25) + joint_vel(25) + net_force(3) = 62
+    observation_space = 62
     num_states = 0
 
     # Simulation Config
@@ -179,52 +185,53 @@ class DHHandCatchEnv(DirectRLEnv):
         
         # Palm state
         palm_pos = self.robot.data.body_pos_w[:, self.palm_link_idx] - self.scene.env_origins 
-        palm_quat = self.robot.data.body_quat_w[:, self.palm_link_idx] 
         
         # Joint state (25 joints)
         joint_pos = self.robot.data.joint_pos 
+        joint_vel = self.robot.data.joint_vel
         
-        # Relative error
-        ball_pos_error = ball_pos - palm_pos 
-        
-        # Contact forces or Applied torques (to track impedance impact)
-        # Here we use joint velocities as a proxy for dynamic state
-        # Or we can just include joint_vel (25) and reduce palm_quat, etc., to keep observation size correct.
-        # Original size: 3 + 3 + 3 + 4 + 25 + 3 = 41. 
-        # The document says: "tổng 41 chiều như bản thảo công bố... lịch sử lực tiếp xúc từ bước trước"
-        # Since original 41 was just the above, let's keep the size 41 to not break networks,
-        # but replace palm_quat (4) with sum of applied torques for the 5 fingers (5). 
-        # Actually, let's just stick to the original 41 if it works.
+        # Contact force (summed over all hand links)
+        # contact_forces.data.net_forces_w is (num_envs, num_sensors, 3)
+        net_force = torch.sum(self.scene.sensors["contact_forces"].data.net_forces_w, dim=1) # (num_envs, 3)
         
         obs = torch.cat([
             ball_pos,        # 3
             ball_vel,        # 3
             palm_pos,        # 3
-            palm_quat,       # 4
             joint_pos,       # 25
-            ball_pos_error   # 3
-        ], dim=-1)           # Total: 41
+            joint_vel,       # 25
+            net_force        # 3
+        ], dim=-1)           # Total: 62
         
         return {"policy": obs}
 
     def _get_rewards(self) -> torch.Tensor:
-        # 1. Penalty for Contact Forces / Torques (Milestone 4)
-        # We penalize high joint torques (effort) to force compliance
+        # 1. Penalty for Contact Forces (Milestone 4 compliance)
+        net_force = torch.sum(self.scene.sensors["contact_forces"].data.net_forces_w, dim=1)
+        force_penalty = torch.sum(torch.square(net_force), dim=-1)
+        
+        # 2. Penalty for Applied Torques
         joint_efforts = self.robot.data.computed_torque
-        # Sum of squared torques for the hand joints (indices 6 to 24)
         torque_penalty = torch.sum(torch.square(joint_efforts[:, 6:25]), dim=-1)
         
-        # 2. Penalty for dropping
-        ball_pos = self.ball.data.root_pos_w - self.scene.env_origins
-        dropped = (ball_pos[:, 2] < 0.2).float()
-        
-        # 3. Dense task progress (optional, keeping minimal to focus on compliance)
+        # 3. Fingertip distance to ball (Dense Reward for closing fingers)
+        fingertip_indices = [10, 15, 20, 25, 30] # Link indices for thumb_Link3, index_Link4, etc (approximation)
+        # Actually, let's just use palm_dist for now to keep it simple, or calculate average dist
         palm_pos = self.robot.data.body_pos_w[:, self.palm_link_idx] - self.scene.env_origins
+        ball_pos = self.ball.data.root_pos_w - self.scene.env_origins
         palm_dist = torch.norm(ball_pos - palm_pos, dim=-1)
+        
+        # Dense reward: negative distance
+        dense_reward = torch.exp(-palm_dist / 0.1)
+        
+        # Sparse drop penalty
+        dropped = (ball_pos[:, 2] < 0.2).float()
         is_caught = (palm_dist < 0.12).float()
         
-        w_3 = 0.001
-        reward = is_caught * 10.0 - w_3 * torque_penalty - 10.0 * dropped
+        w_f = 0.0001
+        w_t = 0.0001
+        
+        reward = dense_reward * 2.0 + is_caught * 5.0 - w_f * force_penalty - w_t * torque_penalty - 10.0 * dropped
         
         return reward
 
