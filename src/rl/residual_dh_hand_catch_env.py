@@ -56,7 +56,7 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
                 damping=40.0,
             ),
             "hand": ImplicitActuatorCfg(
-                joint_names_expr=[".*Link.*"],
+                joint_names_expr=[".*_J.*", ".*thumb_j.*"],
                 effort_limit=1.0,
                 velocity_limit=10.0,
                 stiffness=5.0,
