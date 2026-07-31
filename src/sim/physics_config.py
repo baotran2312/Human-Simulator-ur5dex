@@ -30,7 +30,7 @@ class DynamicBallConfig:
 
 @dataclass
 class UR5DEXConfig:
-    usd_asset_path: str = "/home/ubuntu2204/Baro/Seqhandisaac/ur5dex.usd"
+    usd_asset_path: str = "/home/ubuntu2204/Baro/Seqhandisaac/ur5dex_collision.usd"
     robot_prim_path: str = "/World/UR5DEX"
     base_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     
