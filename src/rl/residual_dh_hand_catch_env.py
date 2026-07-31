@@ -38,11 +38,11 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
             pos=(0.0, 0.0, 0.0),
             joint_pos={
                 ".*shoulder_pan_joint": 0.0,
-                ".*shoulder_lift_joint": -1.5708,
-                ".*elbow_joint": 1.5708,
-                ".*wrist_1_joint": 1.5708,
-                "wrist_2_joint": -1.5708,
-                "wrist_3_joint": -1.5708,
+                ".*shoulder_lift_joint": -1.25,
+                ".*elbow_joint": 1.66,
+                ".*wrist_1_joint": -0.43,
+                "wrist_2_joint": 1.55,
+                "wrist_3_joint": -3.14,
                 ".*_J.*": 0.0,
                 ".*thumb_j.*": 0.0,
             },
@@ -77,7 +77,7 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
             physics_material=sim_utils.RigidBodyMaterialCfg(restitution=0.0, static_friction=1.0),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=(0.3037, 0.1097, 0.8),
+            pos=(0.5777, 0.1114, 0.8),
             lin_vel=(0.0, 0.0, -0.5),
         ),
     )
