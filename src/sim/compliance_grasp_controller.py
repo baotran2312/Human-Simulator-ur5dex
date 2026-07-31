@@ -25,7 +25,7 @@ class SoftComplianceGraspController:
     STATE_COMPLIANT_CLOSING = "COMPLIANT_CLOSING"
     STATE_LOCKED = "LOCKED"
 
-    def __init__(self, contact_threshold_N: float = 0.8, ramp_time_sec: float = 0.15):
+    def __init__(self, contact_threshold_N: float = 0.8, ramp_time_sec: float = 0.05):
         self.F_thresh = contact_threshold_N
         self.ramp_time = ramp_time_sec
         self.state = self.STATE_IDLE
@@ -42,27 +42,29 @@ class SoftComplianceGraspController:
         self.current_pos = np.array([100, 100, 100, 0, 0], dtype=float)
         self.closing_time = 0.0
 
-    def trigger_preshaping(self):
-        """Triggers Phase 1: Pre-shaping finger open posture."""
-        if self.state == self.STATE_IDLE:
+    def trigger_preshaping(self, is_ball_launched: bool = True):
+        # Trigger preshaping as soon as the ball is launched
+        if self.state == self.STATE_IDLE and is_ball_launched:
             self.state = self.STATE_PRESHAPING
-            self.current_pos = np.array([200, 200, 200, 100, 100], dtype=float)
+            # Basket preshape: Thumb spread out, other fingers slightly cupped
+            self.current_pos = np.array([300, 400, 400, 400, 400], dtype=float)
 
-    def update(self, max_contact_force_N: float, dt: float = 1.0 / 60.0) -> Tuple[List[int], str]:
+    def update(self, max_contact_force_N: float, t_catch: float = 999.0, dt: float = 1.0 / 60.0) -> Tuple[List[int], str]:
         """
-        Updates controller state based on real-time contact force feedback.
+        Updates controller state based on real-time contact force and EKF time-to-contact.
 
         Args:
             max_contact_force_N: Maximum impact force reading from fingertip/palm sensors (Newtons)
+            t_catch: Predicted time until the ball reaches the hand (seconds).
             dt: Simulation timestep in seconds
 
         Returns:
             finger_positions: List of 5 target integer positions [0, 1000]
             current_state: String name of active controller state
         """
-        # Transition from PRESHAPING to COMPLIANT_CLOSING upon contact
+        # Transition from PRESHAPING to COMPLIANT_CLOSING upon contact OR pre-trigger
         if self.state in [self.STATE_IDLE, self.STATE_PRESHAPING]:
-            if max_contact_force_N >= self.F_thresh:
+            if max_contact_force_N >= self.F_thresh or t_catch <= 0.05:
                 self.state = self.STATE_COMPLIANT_CLOSING
                 self.closing_time = 0.0
 

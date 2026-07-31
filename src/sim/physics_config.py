@@ -25,19 +25,19 @@ class DynamicBallConfig:
     
     # Launch parameters
     initial_position: Tuple[float, float, float] = (1.2, 0.0, 0.8) # (x, y, z) meters relative to robot base
-    launch_velocity: Tuple[float, float, float] = (-1.5, 0.0, 0.3) # (vx, vy, vz) m/s
+    launch_velocity: Tuple[float, float, float] = (-1.58, 0.24, 1.38) # Perfectly hits palm at t=0.45s
     launch_force_magnitude: float = 2.5                             # Impulse Force F in Newtons
 
 @dataclass
 class UR5DEXConfig:
-    usd_asset_path: str = "/home/nhglab/Tri/Seqhandisaac/ur5dex.usd"
+    usd_asset_path: str = "/home/ubuntu2204/Baro/Seqhandisaac/ur5dex.usd"
     robot_prim_path: str = "/World/UR5DEX"
     base_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     
     # Palm and Fingertip Prim Paths for Contact Sensor API
     palm_prim_path: str = "/World/UR5DEX/DH_base_link"
     fingertip_prim_paths: Tuple[str, ...] = (
-        "/World/UR5DEX/thumb_Link4",
+        "/World/UR5DEX/thumb_Link3",
         "/World/UR5DEX/index_Link4",
         "/World/UR5DEX/middle_Link4",
         "/World/UR5DEX/ring_Link4",

@@ -104,3 +104,6 @@ Dưới đây là các tài liệu tham khảo cốt lõi từ cơ sở lý thuy
 4. **Về Kiến Trúc Điều Khiển Cao Cấp và Tương Lai**:
    * *Vision-Language-Action (VLA) Models for Robotics: A Review Towards Real-World Applications.* (Định hướng tích hợp các mô hình VLA như RT-2 để tối ưu hóa quyết định bắt bóng dựa trên ngữ cảnh).
 
+conda activate env_isaaclab5.1
+python src/rl/train_skrl.py --headless
+tensorboard --logdir logs/skrl/dh_hand_catch

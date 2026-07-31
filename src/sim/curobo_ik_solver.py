@@ -85,46 +85,59 @@ class UR5IKSolver:
                  q_current: Optional[np.ndarray] = None) -> Tuple[np.ndarray, bool]:
         """
         Solves 6-DoF joint angles for target 3D intercept position and ball approach orientation.
-        
-        Args:
-            target_pos: (3,) numpy array [x, y, z] target intercept coordinates
-            ball_vel: (3,) numpy array ball velocity vector
-            q_current: optional current joint angles for minimum-movement solution selection
-
-        Returns:
-            q_solution: (6,) numpy array joint angles in radians
-            success: bool flag
         """
         q_curr = q_current if q_current is not None else np.array([0.0, -1.57, 1.57, -1.57, -1.57, 0.0])
         R_target = self.compute_palm_orientation(ball_vel)
 
-        # Simplified Damped Least Squares (DLS) Numerical IK Solver for robust real-time execution
+        # Dexterous Hand TCP offset from wrist_3_link (approx 33cm along local Z-axis)
+        tcp_offset_local = np.array([0.0, 0.0, 0.33])
+
         q = q_curr.copy()
-        max_iters = 50
-        tol = 1e-3
+        max_iters = 80
+        tol = 5e-3
 
         for _ in range(max_iters):
-            # Forward Kinematics current TCP position
             pos_curr, R_curr = self._forward_kinematics(q)
             
-            pos_err = target_pos - pos_curr
-            if np.linalg.norm(pos_err) < tol:
+            # 1. Compute TCP position (wrist + offset)
+            tcp_offset_world = R_curr @ tcp_offset_local
+            pos_tcp = pos_curr + tcp_offset_world
+            
+            # Position error
+            pos_err = target_pos - pos_tcp
+            
+            # 2. Compute Orientation error
+            R_err = R_target @ R_curr.T
+            angle = math.acos(np.clip((np.trace(R_err) - 1) / 2, -1.0, 1.0))
+            if angle > 1e-5:
+                axis = np.array([R_err[2, 1] - R_err[1, 2], 
+                                 R_err[0, 2] - R_err[2, 0], 
+                                 R_err[1, 0] - R_err[0, 1]]) / (2 * math.sin(angle))
+                ori_err = axis * angle
+            else:
+                ori_err = np.zeros(3)
+                
+            err_vec = np.concatenate([pos_err, ori_err])
+            if np.linalg.norm(err_vec) < tol:
                 return q, True
 
-            # Calculate Jacobian matrix J (6x6)
-            J = self._jacobian(q)
+            # 3. Compute TCP Jacobian
+            J_wrist = self._jacobian(q)
+            J_tcp = J_wrist.copy()
+            for i in range(6):
+                # J_v_tcp = J_v_wrist + J_w_wrist x tcp_offset_world
+                J_tcp[0:3, i] = J_wrist[0:3, i] + np.cross(J_wrist[3:6, i], tcp_offset_world)
             
-            # Damped Least Squares step: dq = J^T * (J * J^T + lambda^2 * I)^(-1) * dx
-            lam = 0.05
-            J_damped = J.T @ np.linalg.inv(J @ J.T + (lam ** 2) * np.eye(6))
+            # 4. Damped Least Squares step (6D)
+            lam = 0.1
+            J_damped = J_tcp.T @ np.linalg.inv(J_tcp @ J_tcp.T + (lam ** 2) * np.eye(6))
             
-            dx = np.zeros(6)
-            dx[0:3] = pos_err * 0.5 # Position gain
+            # Adaptive gain: smaller steps for rotation to ensure stability
+            gain = np.array([0.5, 0.5, 0.5, 0.2, 0.2, 0.2])
+            dx = err_vec * gain
             
             dq = J_damped @ dx
             q = q + dq
-
-            # Clamp to joint limits
             q = np.clip(q, self.JOINT_LIMITS[:, 0], self.JOINT_LIMITS[:, 1])
 
         return q, True

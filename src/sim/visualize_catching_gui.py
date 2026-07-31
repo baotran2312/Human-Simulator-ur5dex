@@ -85,6 +85,8 @@ class IsaacSimGUIVisualizer:
 
         # Physics Scene
         physics_scene = UsdPhysics.Scene.Define(self.stage, Sdf.Path("/World/PhysicsScene"))
+        physx_scene_api = PhysxSchema.PhysxSceneAPI.Apply(physics_scene.GetPrim())
+        physx_scene_api.CreateSolverTypeAttr().Set("TGS") # TGS (Temporal Gauss-Seidel) prevents jitter in complex articulations
 
         # Ground Plane with Physical Collision
         plane_prim = self.stage.DefinePrim("/World/GroundPlane", "Plane")
@@ -95,6 +97,14 @@ class IsaacSimGUIVisualizer:
         if os.path.exists(self.usd_path):
             robot_prim = self.stage.DefinePrim(UR5DEXConfig.robot_prim_path, "Xform")
             robot_prim.GetReferences().AddReference(self.usd_path)
+            
+            # Ensure it's treated as an articulation and disable self-collisions to prevent explosions
+            UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
+            physx_articulation = PhysxSchema.PhysxArticulationAPI.Apply(robot_prim)
+            physx_articulation.CreateEnabledSelfCollisionsAttr().Set(False)
+            physx_articulation.CreateSolverPositionIterationCountAttr().Set(64) # Critical for stability
+            physx_articulation.CreateSolverVelocityIterationCountAttr().Set(8)
+
             self._enable_robot_collisions(robot_prim)
             print(f"[GUIVisualizer] Loaded robot USD and enabled link physics collisions: {self.usd_path}")
 
@@ -154,7 +164,7 @@ class IsaacSimGUIVisualizer:
                     drive_api = UsdPhysics.DriveAPI.Apply(prim, "angular")
                 drive_api.GetTargetPositionAttr().Set(float(np.degrees(q_arm_target[i])))
                 drive_api.GetStiffnessAttr().Set(1e5)
-                drive_api.GetDampingAttr().Set(1e3)
+                drive_api.GetDampingAttr().Set(1e4)
 
     def apply_hand_finger_targets(self, finger_cmd_0_1000: list):
         """Drives finger joint physics drives in Isaac Sim."""
@@ -169,8 +179,8 @@ class IsaacSimGUIVisualizer:
                 if not drive_api:
                     drive_api = UsdPhysics.DriveAPI.Apply(prim, "angular")
                 drive_api.GetTargetPositionAttr().Set(float(target_angle_deg))
-                drive_api.GetStiffnessAttr().Set(1e4)
-                drive_api.GetDampingAttr().Set(1e2)
+                drive_api.GetStiffnessAttr().Set(1e1) # Keep it small to avoid blowing up tiny finger links
+                drive_api.GetDampingAttr().Set(1e0)
 
     def launch_ball(self, pos=[0.85, 0.0, 0.68], vel=[-1.1, 0.0, 0.15]):
         """Launches dynamic ball along parabolic trajectory towards palm workspace."""

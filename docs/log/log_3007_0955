@@ -1,0 +1,92 @@
+(env_isaaclab5.1) ubuntu2204@ubuntu2204:~/Baro/Human-Simulator-ur5dex$ python src/rl/train_skrl.py --headless
+[INFO][AppLauncher]: Using device: cuda:0
+[INFO][AppLauncher]: Loading experience file: /home/ubuntu2204/Nhat/IsaacLab/apps/isaaclab.python.headless.kit
+Loading user config located at: '/home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1/user.config.json'
+[Info] [carb] Logging to file: /home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/isaacsim/kit/logs/Kit/Isaac-Sim/5.1/kit_20260730_095435.log
+2026-07-30T02:54:35Z [83ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-07-30T02:54:35Z [436ms] [Warning] [carb] Acquiring non optional plugin interface which is not listed as dependency: [omni::physx::IPhysxBenchmarks v1.0] (plugin: <default plugin>), by client: omni.physics.physx.plugin. Add it to CARB_PLUGIN_IMPL_DEPS() macro of a client.
+2026-07-30T02:54:35Z [444ms] [Warning] [omni.isaac.dynamic_control]omni.isaac.dynamic_control is deprecated as of Isaac Sim 4.5. No action is needed from end-users.
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 580.173.02    | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     | | Device-ID | UUID       |
+|     |                                  |        |     | | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 3060          | Yes: 0 |     | 12288   MB | 10de      | 0          |
+|     |                                  |        |     | | 2504      | 6918040a.. |
+|     |                                  |        |     | | 1         |            |
+|=============================================================================================|
+| OS: 22.04.5 LTS (Jammy Jellyfish) ubuntu, Version: 22.04.5, Kernel: 6.8.0-134-generic
+| XServer Vendor: The X.Org Foundation, XServer Version: 12101004 (1.21.1.4)
+| Processor: 12th Gen Intel(R) Core(TM) i5-12400F
+| Cores: 6 | Logical Cores: 12
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 31882 | Free Memory: 24476
+| Total Page/Swap (MB): 0 | Free Page/Swap: 0
+|---------------------------------------------------------------------------------------------|
+2026-07-30T02:54:38Z [2,993ms] [Warning] [gpu.foundation.plugin] CPU performance profile is set to powersave. This profile sets the CPUto the lowest frequency reducing performance.
+2026-07-30T02:54:38Z [3,000ms] [Warning] [gpu.foundation.plugin] IOMMU is enabled.
+[INFO] Setting up Isaac Lab DirectRLEnv...
+2026-07-30T02:54:38Z [3,393ms] [Warning] [isaaclab.envs.direct_rl_env] Seed not set for the environment. The environment creation may not be deterministic.
+
+======================================================================================
+[INFO][IsaacLab]: Logging to file: /tmp/isaaclab/logs/isaaclab_2026-07-30_09-54-38.log
+======================================================================================
+
+09:54:38 [simulation_context.py] WARNING: The `enable_external_forces_every_iteration` parameter in the PhysxCfg is set to False. If you are experiencing noisy velocities, consider enabling this flag. You may need to slightly increase the number of velocity iterations (setting it to 1 or 2 rather than 0), together with this flag, to improve the accuracy of velocity updates.
+[INFO]: Base environment:
+        Environment device    : cuda:0
+        Environment seed      : None
+        Physics step-size     : 0.016666666666666666
+        Rendering step-size   : 0.03333333333333333
+        Environment step-size : 0.03333333333333333
+[INFO]: Time taken for scene creation : 2.322332 seconds
+[INFO]: Scene manager:  <class InteractiveScene>
+        Number of environments: 1024
+        Environment spacing   : 3.0
+        Source prim name      : /World/envs/env_0
+        Global prim paths     : []
+        Replicate physics     : True
+[INFO]: Starting the simulation. This may take a few seconds. Please wait...
+[INFO]: Time taken for simulation start : 1.141258 seconds
+09:54:41 [direct_rl_env.py] WARNING: DirectRLEnvCfg.num_states is deprecated. Use DirectRLEnvCfg.state_space instead.
+[INFO]: Completed setting up the environment...
+[UR5IKSolver] Utilizing Analytical/Numerical UR5 IK engine.
+[INFO] Wrapping environment for SKRL...
+[skrl:INFO] Environment wrapper: Isaac Lab (single-agent)
+[INFO] Starting SKRL Training Loop...
+  0%|                                   | 0/5000000 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/ubuntu2204/Baro/Human-Simulator-ur5dex/src/rl/train_skrl.py", line 137, in <module>
+    main()
+  File "/home/ubuntu2204/Baro/Human-Simulator-ur5dex/src/rl/train_skrl.py", line 131, in main
+    trainer.train()
+  File "/home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/skrl/trainers/torch/sequential.py", line 86, in train
+    self.single_agent_train()
+  File "/home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/skrl/trainers/torch/base.py", line 196, in single_agent_train
+    next_states, rewards, terminated, truncated, infos = self.env.step(actions)
+                                                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/skrl/envs/wrappers/torch/isaaclab_envs.py", line 62, in step
+    observations, reward, terminated, truncated, self._info = self._env.step(actions)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu2204/Nhat/IsaacLab/source/isaaclab/isaaclab/envs/direct_rl_env.py", line 393, in step
+    self.reward_buf = self._get_rewards()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu2204/Baro/Human-Simulator-ur5dex/src/rl/dh_hand_catch_env.py", line 161, in _get_rewards
+    ft_idx = self.robot.find_bodies(name)[0][0]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu2204/Nhat/IsaacLab/source/isaaclab/isaaclab/assets/articulation/articulation.py", line 286, in find_bodies
+    return string_utils.resolve_matching_names(name_keys, self.body_names, preserve_order)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu2204/Nhat/IsaacLab/source/isaaclab/isaaclab/utils/string.py", line 267, in resolve_matching_names
+    raise ValueError(
+ValueError: Not all regular expressions are matched! Please check that the regular expressions are correct: 
+        thumb_Link4: []
+Available strings: ['base_link', 'shoulder_link', 'upper_arm_link','forearm_link', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link', 'DH_base_link', 'index_Link1', 'middle_Link1', 'pinky_Link1', 'ring_Link1', 'thumb_Link1', 'index_Link2', 'middle_Link2', 'pinky_Link2', 'ring_Link2', 'thumb_Link2', 'index_Link3', 'middle_Link3', 'pinky_Link3', 'ring_Link3', 'thumb_Link3', 'index_Link4', 'middle_Link4', 'pinky_Link4', 'ring_Link4']
+
+[skrl:INFO] Closing environment
+[skrl:INFO] Environment closed
+2026-07-30T02:54:43Z [8,132ms] [Warning] [omni.physx.plugin] USD stage detach not called, holding a loose ptr to a stage!
+2026-07-30T02:54:43Z [8,590ms] [Warning] [carb] Recursive unloadAllPlugins() detected!

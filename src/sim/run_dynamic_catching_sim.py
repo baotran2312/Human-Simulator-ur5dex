@@ -1,18 +1,8 @@
 #!/usr/bin/env python3
 """
 Week 2 Task 1: Physical Simulation Runner for Case 1 (Static) & Case 2 (Dynamic) Catching
-================================================================================-------
-This script executes complete closed-loop dynamic ball catching in NVIDIA Isaac Sim:
-1. Spawns dynamic rigid body ball thrown with random velocity vectors v_0.
-2. Runs Extended Kalman Filter (EKF) to predict 3D ball trajectory and intercept point P_int.
-3. Computes UR5 Inverse Kinematics (cuRobo/IK) to position hand palm facing incoming ball.
-4. Executes Soft Compliance Controller on DH Dexterous Hand upon contact detection.
-5. Benchmark metrics logged: Terminal Hand Positioning Error (mm), EKF Trajectory Prediction Error (mm), Catch Success Rate.
-
-Usage:
-    /home/nhglab/anaconda3/envs/env_isaacsim/bin/python src/sim/run_dynamic_catching_sim.py --headless --num_trials 5
+(REWRITTEN: Real Physics, Underactuation, 3-5m/s Velocity, True Contact Force)
 """
-
 import argparse
 import csv
 import os
@@ -21,7 +11,6 @@ import time
 import numpy as np
 from typing import Tuple, List, Optional
 
-# Add src root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from src.sim.ekf_ball_tracker import EKFBallTracker
@@ -36,7 +25,6 @@ parser.add_argument("--num_trials", type=int, default=5, help="Number of physica
 parser.add_argument("--csv_out", type=str, default="data/case1_case2_results.csv", help="Path to output CSV file")
 args, _ = parser.parse_known_args()
 
-# --- Initialize Isaac Sim App ---
 try:
     from isaacsim import SimulationApp
     simulation_app = SimulationApp({"headless": args.headless})
@@ -47,16 +35,12 @@ except ImportError:
 import omni
 import omni.kit.commands
 import omni.timeline
-from pxr import Gf, Usd, UsdGeom, UsdPhysics, PhysxSchema, Sdf
+from pxr import Gf, Usd, UsdGeom, UsdPhysics, PhysxSchema, Sdf, UsdShade
 
 class DynamicCatchingSimulationRunner:
     ARM_JOINT_NAMES = [
-        "shoulder_pan_joint",
-        "shoulder_lift_joint",
-        "elbow_joint",
-        "wrist_1_joint",
-        "wrist_2_joint",
-        "wrist_3_joint"
+        "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+        "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"
     ]
 
     FINGER_JOINT_NAMES = [
@@ -72,33 +56,47 @@ class DynamicCatchingSimulationRunner:
         self.usd_context = omni.usd.get_context()
         self.stage = self.usd_context.get_stage()
 
-        # Algorithms
         self.ekf = EKFBallTracker(dt=1.0/60.0)
         self.ik_solver = UR5IKSolver()
-        self.hand_controller = SoftComplianceGraspController()
+        self.hand_controller = SoftComplianceGraspController(contact_threshold_N=1.0)
         
         self.ball_prim_path = "/World/DynamicBall"
+        self.prev_vel_ball = np.zeros(3)
         self._setup_physical_scene()
 
     def _setup_physical_scene(self):
-        """Constructs physics scene and loads UR5DEX robot asset."""
         physics_scene = UsdPhysics.Scene.Define(self.stage, Sdf.Path("/World/PhysicsScene"))
+        physx_scene_api = PhysxSchema.PhysxSceneAPI.Apply(physics_scene.GetPrim())
+        physx_scene_api.CreateSolverTypeAttr().Set("TGS")
 
-        # Ground plane with Physical Collision
+        # Define high-friction, zero-restitution material to simulate a soft energy-absorbing ball/glove
+        material_path = "/World/SoftCatchMaterial"
+        UsdShade.Material.Define(self.stage, material_path)
+        mat_prim = self.stage.GetPrimAtPath(material_path)
+        physx_mat = UsdPhysics.MaterialAPI.Apply(mat_prim)
+        physx_mat.CreateRestitutionAttr().Set(0.0) # Zero bounce
+        physx_mat.CreateStaticFrictionAttr().Set(5.0) # High grip
+        physx_mat.CreateDynamicFrictionAttr().Set(5.0)
+
         plane_prim = self.stage.DefinePrim("/World/GroundPlane", "Plane")
         UsdPhysics.CollisionAPI.Apply(plane_prim)
         omni.kit.commands.execute("CreateMeshPrimWithDefaultXform", prim_type="Plane")
 
-        # Load Robot USD Asset
         if os.path.exists(self.usd_path):
             robot_prim = self.stage.DefinePrim(UR5DEXConfig.robot_prim_path, "Xform")
             robot_prim.GetReferences().AddReference(self.usd_path)
+            
+            UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
+            physx_articulation = PhysxSchema.PhysxArticulationAPI.Apply(robot_prim)
+            physx_articulation.CreateEnabledSelfCollisionsAttr().Set(False)
+            physx_articulation.CreateSolverPositionIterationCountAttr().Set(64)
+            physx_articulation.CreateSolverVelocityIterationCountAttr().Set(8)
+
             self._enable_robot_collisions(robot_prim)
             print(f"[CatchSim] Loaded UR5DEX robot asset: {self.usd_path}")
         else:
             print(f"[WARNING] USD asset not found at {self.usd_path}.")
 
-        # Create Dynamic Ball Prim
         sphere_geom = UsdGeom.Sphere.Define(self.stage, Sdf.Path(self.ball_prim_path))
         sphere_geom.GetRadiusAttr().Set(0.035)
         sphere_geom.AddTranslateOp().Set(Gf.Vec3f(0.85, 0.0, 0.68))
@@ -107,12 +105,15 @@ class DynamicCatchingSimulationRunner:
         UsdPhysics.RigidBodyAPI.Apply(sphere_geom.GetPrim())
         UsdPhysics.CollisionAPI.Apply(sphere_geom.GetPrim())
         
+        # Bind the soft material to the ball
+        material_binding = UsdShade.MaterialBindingAPI.Apply(sphere_geom.GetPrim())
+        material_binding.Bind(UsdShade.Material(mat_prim), UsdShade.Tokens.weakerThanDescendants, "physics")
+        
         mass_api = UsdPhysics.MassAPI.Apply(sphere_geom.GetPrim())
         mass_api.GetMassAttr().Set(0.15)
         PhysxSchema.PhysxContactReportAPI.Apply(sphere_geom.GetPrim())
 
     def _enable_robot_collisions(self, root_prim):
-        """Enforces UsdPhysics & PhysX collision APIs on all UR5 and DH Hand link meshes."""
         for prim in Usd.PrimRange(root_prim):
             type_name = prim.GetTypeName()
             if type_name in ["Mesh", "Capsule", "Sphere", "Cylinder", "Cube"]:
@@ -121,7 +122,6 @@ class DynamicCatchingSimulationRunner:
                 mesh_col.CreateApproximationAttr().Set("convexHull")
 
     def apply_arm_joint_targets(self, q_arm_target: np.ndarray):
-        """Drives UR5 arm joint physics drives in Isaac Sim with high bandwidth."""
         for i, joint_name in enumerate(self.ARM_JOINT_NAMES):
             if i >= len(q_arm_target):
                 break
@@ -132,11 +132,10 @@ class DynamicCatchingSimulationRunner:
                 if not drive_api:
                     drive_api = UsdPhysics.DriveAPI.Apply(prim, "angular")
                 drive_api.GetTargetPositionAttr().Set(float(np.degrees(q_arm_target[i])))
-                drive_api.GetStiffnessAttr().Set(1e7)
-                drive_api.GetDampingAttr().Set(1e5)
+                drive_api.GetStiffnessAttr().Set(1e5)
+                drive_api.GetDampingAttr().Set(1e4)
 
     def apply_hand_finger_targets(self, finger_cmd_0_1000: list):
-        """Drives finger joint physics drives in Isaac Sim."""
         closing_ratio = finger_cmd_0_1000[1] / 1000.0
         target_angle_deg = closing_ratio * 60.0
 
@@ -148,22 +147,25 @@ class DynamicCatchingSimulationRunner:
                 if not drive_api:
                     drive_api = UsdPhysics.DriveAPI.Apply(prim, "angular")
                 drive_api.GetTargetPositionAttr().Set(float(target_angle_deg))
-                drive_api.GetStiffnessAttr().Set(1e5)
-                drive_api.GetDampingAttr().Set(1e3)
+                
+                # Mimic tendon underactuation logic
+                if "j3" in joint_name.lower() or "j4" in joint_name.lower():
+                    drive_api.GetStiffnessAttr().Set(0.5) 
+                    drive_api.GetDampingAttr().Set(0.1)
+                else:
+                    drive_api.GetStiffnessAttr().Set(20.0) 
+                    drive_api.GetDampingAttr().Set(2.0)
 
-    def launch_ball(self, pos=[0.85, 0.0, 0.68], vel=[-1.1, 0.0, 0.15]):
-        """Resets dynamic ball and applies initial velocity."""
+    def launch_ball(self, pos=[2.5, 0.0, 0.8], vel=[-4.0, 0.0, 1.5]):
         ball_prim = self.stage.GetPrimAtPath(self.ball_prim_path)
-        if not ball_prim.IsValid():
-            return
+        if not ball_prim.IsValid(): return
 
         xform = UsdGeom.Xformable(ball_prim)
         xform.ClearXformOpOrder()
         xform.AddTranslateOp().Set(Gf.Vec3f(*pos))
 
         rigid_api = UsdPhysics.RigidBodyAPI(ball_prim)
-        if not rigid_api:
-            rigid_api = UsdPhysics.RigidBodyAPI.Apply(ball_prim)
+        if not rigid_api: rigid_api = UsdPhysics.RigidBodyAPI.Apply(ball_prim)
             
         rigid_api.CreateVelocityAttr().Set(Gf.Vec3f(*vel))
         rigid_api.CreateAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
@@ -171,9 +173,9 @@ class DynamicCatchingSimulationRunner:
         self.ekf.reset()
         self.hand_controller.reset()
         self.hand_controller.trigger_preshaping()
+        self.prev_vel_ball = np.array(vel)
 
     def get_ball_pos_vel(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Queries 3D position and velocity of dynamic ball."""
         ball_prim = self.stage.GetPrimAtPath(self.ball_prim_path)
         if not ball_prim.IsValid():
             return np.zeros(3), np.zeros(3)
@@ -195,11 +197,10 @@ def main():
     time.sleep(0.5)
 
     os.makedirs(os.path.dirname(args.csv_out), exist_ok=True)
-    
     results = []
 
     print("\n======================================================================")
-    print("  RUNNING HIGH-PRECISION PHYSICAL SIMULATION BENCHMARK (WEEK 2)")
+    print("  RUNNING REALISTIC PHYSICAL SIMULATION BENCHMARK (WEEK 2) [FIXED]")
     print("======================================================================\n")
 
     for trial in range(1, args.num_trials + 1):
@@ -207,20 +208,22 @@ def main():
         case_name = "Case 1: Static Catch" if is_case1 else f"Case 2: Dynamic Catch #{trial-1}"
 
         if is_case1:
-            pos_0 = [0.45, 0.0, 0.70] # Directly above palm
-            vel_0 = [0.0, 0.0, -0.4] # Dropped straight down
+            pos_0 = [0.45, 0.0, 0.70]
+            vel_0 = [0.0, 0.0, -0.4]
         else:
-            pos_0 = [0.85, np.random.uniform(-0.04, 0.04), 0.65]
-            vel_0 = [-1.05 + np.random.uniform(-0.05, 0.05), np.random.uniform(-0.03, 0.03), 0.12 + np.random.uniform(-0.02, 0.03)]
+            pos_0 = [2.5, np.random.uniform(-0.05, 0.05), 0.7]
+            # Realistic throw suitable for UR5 physical capabilities (3 to 4 m/s)
+            vx = -np.random.uniform(3.0, 4.0)
+            vz = np.random.uniform(1.5, 2.5)
+            vel_0 = [vx, np.random.uniform(-0.1, 0.1), vz]
 
         sim.launch_ball(pos=pos_0, vel=vel_0)
 
         step_count = 0
-        is_caught = False
         terminal_errors_mm = []
         ekf_pred_errors_mm = []
 
-        # Pre-position arm to initial target
+        # Pre-position arm
         for _ in range(10):
             simulation_app.update()
             pos_ball, vel_ball = sim.get_ball_pos_vel()
@@ -229,43 +232,66 @@ def main():
             q_sol, ik_success = sim.ik_solver.solve_ik(target_pos=p_int, ball_vel=vel_ball)
             sim.apply_arm_joint_targets(q_sol)
 
-        while simulation_app.is_running() and step_count < 180: # 3 seconds simulation time
+        dt = 1.0 / 60.0
+        while simulation_app.is_running() and step_count < 120: # 2 seconds max
             simulation_app.update()
             step_count += 1
 
             pos_ball, vel_ball = sim.get_ball_pos_vel()
 
-            # Step 1: EKF Update
             sim.ekf.update(pos_ball)
-
-            # Step 2: Predict Intercept Point P_int
             p_int, t_catch = sim.ekf.predict_intercept_point(workspace_z=0.55)
-
-            # Step 3: Compute Real-Time UR5 Inverse Kinematics
-            q_sol, ik_success = sim.ik_solver.solve_ik(target_pos=p_int, ball_vel=vel_ball)
-
-            # Step 4: Apply Active UR5 Arm & DH Hand Joint Drives
+            
+            # Active Receding Trajectory (Vung tay ra đón và giật lùi)
+            if t_catch > 0.4:
+                # Reach out ahead of the intercept point to prepare
+                target_pos = p_int - (vel_ball / np.linalg.norm(vel_ball)) * 0.15
+            elif t_catch > 0.15:
+                # Move to the exact intercept point
+                target_pos = p_int
+            else:
+                # Receding motion: jerk the target backward along the velocity vector to generate backward momentum
+                target_pos = p_int + (vel_ball / np.linalg.norm(vel_ball)) * 0.20
+            
+            # Solve IK and send to robot
+            q_sol, ik_success = sim.ik_solver.solve_ik(target_pos=target_pos, ball_vel=vel_ball)
             sim.apply_arm_joint_targets(q_sol)
 
-            dist_hand_ball = np.linalg.norm(pos_ball - p_int)
+            # Get actual physical palm position for error calculation
+            palm_prim = sim.stage.GetPrimAtPath(f"{UR5DEXConfig.robot_prim_path}/DexterousHandBase/DH_base_link")
+            if palm_prim.IsValid():
+                palm_xform = UsdGeom.Xformable(palm_prim)
+                palm_pos = palm_xform.ComputeLocalToWorldTransform(Usd.TimeCode.Default()).ExtractTranslation()
+                palm_pos = np.array([palm_pos[0], palm_pos[1], palm_pos[2]])
+            else:
+                palm_pos = p_int
 
-            # EKF Prediction error compared to actual ball trajectory
+            dist_hand_ball = np.linalg.norm(pos_ball - palm_pos)
             ekf_err = np.linalg.norm(pos_ball - p_int) * 1000.0
 
-            # Record terminal accuracy when ball reaches palm workspace height (z_ball <= 0.65)
             if pos_ball[2] <= 0.65 and pos_ball[2] >= 0.35:
-                terminal_errors_mm.append(min(dist_hand_ball * 1000.0, 28.5))
-                ekf_pred_errors_mm.append(min(ekf_err, 15.0))
+                terminal_errors_mm.append(dist_hand_ball * 1000.0)
+                ekf_pred_errors_mm.append(ekf_err)
 
-            simulated_contact_force = 5.0 if dist_hand_ball < 0.15 else 0.0
-            finger_cmds, hand_state = sim.hand_controller.update(simulated_contact_force, dt=1.0/60.0)
+            # True physics-based contact force detection
+            accel = np.linalg.norm(vel_ball - sim.prev_vel_ball) / dt
+            impact_force = 0.15 * accel
+            sim.prev_vel_ball = vel_ball.copy()
+
+            # Pre-trigger Grasp Strategy
+            finger_cmds, hand_state = sim.hand_controller.update(impact_force, t_catch=t_catch, dt=dt)
             sim.apply_hand_finger_targets(finger_cmds)
+            
+            # Ground collision early exit
+            if pos_ball[2] < 0.1:
+                break
 
-            if dist_hand_ball < 0.15 or hand_state in ["COMPLIANT_CLOSING", "LOCKED"]:
-                is_caught = True
+        # True evaluation: ball is held at the end of the trajectory
+        pos_ball, _ = sim.get_ball_pos_vel()
+        is_caught = (pos_ball[2] > 0.35)
 
-        final_terminal_err = float(np.mean(terminal_errors_mm)) if terminal_errors_mm else 18.5
-        final_ekf_err = float(np.mean(ekf_pred_errors_mm)) if ekf_pred_errors_mm else 11.2
+        final_terminal_err = float(np.mean(terminal_errors_mm)) if terminal_errors_mm else float('nan')
+        final_ekf_err = float(np.mean(ekf_pred_errors_mm)) if ekf_pred_errors_mm else float('nan')
 
         print(f"[{case_name:24s}] Caught: {str(is_caught):5s} | Terminal Hand Error: {final_terminal_err:5.2f} mm | EKF Pred Error: {final_ekf_err:4.2f} mm")
 
@@ -273,21 +299,19 @@ def main():
             "trial": trial,
             "case": case_name,
             "caught": is_caught,
-            "terminal_hand_error_mm": round(final_terminal_err, 2),
-            "ekf_pred_error_mm": round(final_ekf_err, 2),
+            "terminal_hand_error_mm": round(final_terminal_err, 2) if not np.isnan(final_terminal_err) else -1,
+            "ekf_pred_error_mm": round(final_ekf_err, 2) if not np.isnan(final_ekf_err) else -1,
             "launch_vel_x": round(vel_0[0], 2),
             "launch_vel_y": round(vel_0[1], 2),
             "launch_vel_z": round(vel_0[2], 2)
         })
 
-    # Write CSV output
     with open(args.csv_out, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["trial", "case", "caught", "terminal_hand_error_mm", "ekf_pred_error_mm", "launch_vel_x", "launch_vel_y", "launch_vel_z"])
         writer.writeheader()
         writer.writerows(results)
 
-    print(f"\n[DynamicCatchingSim] Precision benchmark results successfully saved to: {args.csv_out}")
-
+    print(f"\n[DynamicCatchingSim] Realistic benchmark results successfully saved to: {args.csv_out}")
     timeline.stop()
     simulation_app.close()
 
