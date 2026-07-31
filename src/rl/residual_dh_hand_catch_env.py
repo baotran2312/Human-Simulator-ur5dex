@@ -132,10 +132,7 @@ class DHHandCatchEnv(DirectRLEnv):
             for name in ["thumb_Link3", "index_Link4", "middle_Link4", "ring_Link4", "pinky_Link4"]
         ]
         
-        # HARDCODE base catch pose to the standard bent elbow pose.
-        # This completely removes any IK solver instability or unreachable poses.
-        # Palm will be at [0.487, 0.109, 0.431].
-        self.base_catch_pose = torch.tensor([0.0, -1.5708, 1.5708, -1.5708, -1.5708, 0.0], device=self.device, dtype=torch.float32)
+        self.base_catch_pose = torch.tensor([0.0, -1.25, 1.66, -0.43, 1.55, -3.14], device=self.device, dtype=torch.float32)
 
     def _setup_scene(self):
         pass
