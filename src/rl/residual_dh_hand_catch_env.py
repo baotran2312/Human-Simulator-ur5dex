@@ -57,11 +57,11 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
             ),
             "hand": ImplicitActuatorCfg(
                 joint_names_expr=[".*_J.*", ".*thumb_j.*"],
-                effort_limit=1.0,
+                effort_limit=30.0,
                 velocity_limit=10.0,
                 stiffness=5.0,
                 damping=0.5,
-            )
+            ),
         }
     )
 
@@ -77,7 +77,7 @@ class DHHandCatchSceneCfg(InteractiveSceneCfg):
             physics_material=sim_utils.RigidBodyMaterialCfg(restitution=0.0, static_friction=1.0),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=(0.5777, 0.1114, 0.8),
+            pos=(0.3037, 0.1097, 0.8),
             lin_vel=(0.0, 0.0, -0.5),
         ),
     )
@@ -153,8 +153,8 @@ class DHHandCatchEnv(DirectRLEnv):
         
         # Shape: (num_envs, 1)
         # Trigger distance 0.15m so fingers start closing just before impact.
-        # Set target to 0.75 rad (forms a cup shape to hold the ball).
-        target_finger_joint_pos = torch.where(palm_dist.unsqueeze(-1) < 0.35, 0.75, 0.0)
+        # Set target to 1.5 rad (forms a tight fist to hold the ball).
+        target_finger_joint_pos = torch.where(palm_dist.unsqueeze(-1) < 0.35, 1.5, 0.0)
         
         # 2. Micro Control (DRL Impedance)
         clipped_actions = torch.clamp(self.actions, min=-1.0, max=1.0)
