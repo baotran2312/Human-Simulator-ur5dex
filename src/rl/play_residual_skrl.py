@@ -114,14 +114,14 @@ def main():
                 action_space=env_wrapped.action_space,
                 device=env.device)
     
-    log_dir = "logs/skrl/residual_dh_hand_catch/PPO_Residual_v16"
+    log_dir = "logs/skrl/residual_dh_hand_catch/PPO_Residual_v17"
     latest_cp = get_latest_checkpoint(log_dir)
     if latest_cp:
         print(f"[INFO] Loading checkpoint: {latest_cp}")
         agent.load(latest_cp)
     else:
-        print(f"[WARNING] No checkpoint found in {log_dir}!")
-        return
+        print(f"[WARNING] No checkpoint found in {log_dir}! Running with random weights.")
+        # return
 
     agent.set_mode("eval")
     
@@ -135,10 +135,11 @@ def main():
         obs, reward, terminated, truncated, info = env_wrapped.step(actions)
         
         # In các thông số quan sát
-        ball_z = env.ball.data.root_pos_w[0, 2].item()
-        palm_z = env.robot.data.body_pos_w[0, env.palm_link_idx, 2].item()
+        ball_pos = env.ball.data.root_pos_w[0].cpu().numpy()
+        palm_pos = env.robot.data.body_pos_w[0, env.palm_link_idx].cpu().numpy()
         action_mean = actions[0].mean().item()
-        print(f"Step {i:03d} | Reward: {reward[0].item():+.4f} | Ball Z: {ball_z:.4f} | Palm Z: {palm_z:.4f} | Action Mean: {action_mean:.4f}")
+        
+        print(f"Step {i:03d} | Reward: {reward[0].item():+.4f} | Ball: [{ball_pos[0]:.4f}, {ball_pos[1]:.4f}, {ball_pos[2]:.4f}] | Wrist: [{palm_pos[0]:.4f}, {palm_pos[1]:.4f}, {palm_pos[2]:.4f}] | Action Mean: {action_mean:.4f}")
         
     env.close()
     simulation_app.close()

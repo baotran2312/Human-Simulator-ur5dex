@@ -100,7 +100,7 @@ def main():
     
     # Logging Configuration
     cfg["experiment"]["directory"] = "logs/skrl/residual_dh_hand_catch"
-    cfg["experiment"]["experiment_name"] = "PPO_Residual_v16"
+    cfg["experiment"]["experiment_name"] = "PPO_Residual_v17"
     cfg["experiment"]["write_interval"] = 100
     cfg["experiment"]["checkpoint_interval"] = 500
     
