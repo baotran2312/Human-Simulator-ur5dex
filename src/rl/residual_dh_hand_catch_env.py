@@ -147,7 +147,9 @@ class DHHandCatchEnv(DirectRLEnv):
         joint_targets[:, :6] = self.ur5_q_targets
         
         # 1. Macro Control (Heuristic Trigger)
-        palm_pos = self.robot.data.body_pos_w[:, self.palm_link_idx] - self.scene.env_origins
+        # The true palm center is offset from the wrist (DH_base_link) by ~33cm
+        wrist_pos = self.robot.data.body_pos_w[:, self.palm_link_idx] - self.scene.env_origins
+        palm_pos = wrist_pos + torch.tensor([0.3303, -0.0014, 0.0], device=self.device)
         ball_pos = self.ball.data.root_pos_w - self.scene.env_origins
         palm_dist = torch.norm(ball_pos - palm_pos, dim=-1)
         

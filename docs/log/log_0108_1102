@@ -1,0 +1,94 @@
+(env_isaaclab5.1) ubuntu2204@ubuntu2204:~/Baro/Human-Simulator-ur5dex$ python src/rl/train_residual_skrl.py --headless
+[INFO][AppLauncher]: Using device: cuda:0
+[INFO][AppLauncher]: Loading experience file: /home/ubuntu2204/Nhat/IsaacLab/apps/isaaclab.python.headless.kit
+Loading user config located at: '/home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1/user.config.json'
+[Info] [carb] Logging to file: /home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/isaacsim/kit/logs/Kit/Isaac-Sim/5.1/kit_20260801_110212.log
+2026-08-01T04:02:12Z [89ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-08-01T04:02:12Z [284ms] [Error] [omni.core.ITypeFactory] Circular dependency detected! Interface: omni::platforminfo::ICpuInfo requested. But plugin with an interface: /home/ubuntu2204/miniconda3/envs/env_isaaclab5.1/lib/python3.11/site-packages/isaacsim/kit/kernel/plugins/libomni.platforminfo.plugin.so is already in resolving state.
+2026-08-01T04:02:12Z [284ms] [Error] [carb] [Plugin: gpu.foundation.plugin] Dependency: [omni::platforminfo::ICpuInfo v1.0] failed to be resolved.
+2026-08-01T04:02:12Z [469ms] [Warning] [carb] Acquiring non optional plugin interface which is not listed as dependency: [omni::physx::IPhysxBenchmarks v1.0] (plugin: <default plugin>), by client: omni.physics.physx.plugin. Add it to CARB_PLUGIN_IMPL_DEPS() macro of a client.
+2026-08-01T04:02:12Z [477ms] [Warning] [omni.isaac.dynamic_control] omni.isaac.dynamic_control is deprecated as of Isaac Sim 4.5. No action is needed from end-users.
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 580.173.02    | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 3060          | Yes: 0 |     | 12288   MB | 10de      | 0          |
+|     |                                  |        |     |            | 2504      | 6918040a.. |
+|     |                                  |        |     |            | 1         |            |
+|=============================================================================================|
+| OS: 22.04.5 LTS (Jammy Jellyfish) ubuntu, Version: 22.04.5, Kernel: 6.8.0-136-generic
+| XServer Vendor: The X.Org Foundation, XServer Version: 12101004 (1.21.1.4)
+| Processor: 12th Gen Intel(R) Core(TM) i5-12400F
+| Cores: 6 | Logical Cores: 12
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 31884 | Free Memory: 25021
+| Total Page/Swap (MB): 0 | Free Page/Swap: 0
+|---------------------------------------------------------------------------------------------|
+2026-08-01T04:02:15Z [3,083ms] [Warning] [gpu.foundation.plugin] CPU performance profile is set to powersave. This profile sets the CPU to the lowest frequency reducing performance.
+2026-08-01T04:02:15Z [3,092ms] [Warning] [gpu.foundation.plugin] IOMMU is enabled.
+[INFO] Setting up Isaac Lab DirectRLEnv...
+2026-08-01T04:02:15Z [3,483ms] [Warning] [isaaclab.envs.direct_rl_env] Seed not set for the environment. The environment creation may not be deterministic.
+
+======================================================================================
+[INFO][IsaacLab]: Logging to file: /tmp/isaaclab/logs/isaaclab_2026-08-01_11-02-15.log
+======================================================================================
+
+11:02:15 [simulation_context.py] WARNING: The `enable_external_forces_every_iteration` parameter in the PhysxCfg is set to False. If you are experiencing noisy velocities, consider enabling this flag. You may need to slightly increase the number of velocity iterations (setting it to 1 or 2 rather than 0), together with this flag, to improve the accuracy of velocity updates.
+[INFO]: Base environment:
+        Environment device    : cuda:0
+        Environment seed      : None
+        Physics step-size     : 0.016666666666666666
+        Rendering step-size   : 0.03333333333333333
+        Environment step-size : 0.03333333333333333
+[INFO]: Time taken for scene creation : 1.078288 seconds
+[INFO]: Scene manager:  <class InteractiveScene>
+        Number of environments: 1024
+        Environment spacing   : 3.0
+        Source prim name      : /World/envs/env_0
+        Global prim paths     : []
+        Replicate physics     : True
+[INFO]: Starting the simulation. This may take a few seconds. Please wait...
+2026-08-01T04:02:17Z [4,876ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/DH_base_link/collisions/DH_base_link/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,878ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link1/collisions/index_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,879ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link2/collisions/index_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,879ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link3/collisions/index_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,880ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link4/collisions/index_Link4/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,880ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/middle_Link1/collisions/middle_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,882ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/middle_Link2/collisions/middle_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,883ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/middle_Link3/collisions/middle_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,883ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/middle_Link4/collisions/middle_Link4/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,884ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/pinky_Link1/collisions/pinky_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,885ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/pinky_Link2/collisions/pinky_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,886ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/pinky_Link3/collisions/pinky_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,886ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/pinky_Link4/collisions/pinky_Link4/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,887ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/ring_Link1/collisions/ring_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,888ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/ring_Link2/collisions/ring_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,889ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/ring_Link3/collisions/ring_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,889ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/ring_Link4/collisions/ring_Link4/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,890ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/thumb_Link1/collisions/thumb_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,891ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/thumb_Link2/collisions/thumb_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:17Z [4,891ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/thumb_Link3/collisions/thumb_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+11:02:17 [actuator_pd.py] WARNING: The <ImplicitActuatorCfg> object has a value for 'effort_limit'. This parameter will be removed in the future. To set the effort limit, please use 'effort_limit_sim' instead.
+11:02:17 [actuator_pd.py] WARNING: The <ImplicitActuatorCfg> object has a value for 'velocity_limit'. Previously, although this value was specified, it was not getting used by implicit actuators. Since this parameter affects the simulation behavior, we continue to not use it. This parameter will be removed in the future. To set the velocity limit, please use 'velocity_limit_sim' instead.
+2026-08-01T04:02:18Z [6,136ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/middle_Link4/collisions/middle_Link4/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,136ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link1/collisions/index_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,137ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link2/collisions/index_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,138ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link4/collisions/index_Link4/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,138ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/DH_base_link/collisions/DH_base_link/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,139ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/middle_Link2/collisions/middle_Link2/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,140ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/pinky_Link1/collisions/pinky_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,140ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/index_Link3/collisions/index_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,141ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/ring_Link1/collisions/ring_Link1/mesh) belongs to a mesh merge collision and also standalone collision.
+2026-08-01T04:02:18Z [6,142ms] [Warning] [omni.physx.plugin] Prim (/World/envs/env_0/UR5DEX/DexterousHandBase/pinky_Link3/collisions/pinky_Link3/mesh) belongs to a mesh merge collision and also standalone collision.
+[INFO]: Time taken for simulation start : 1.596175 seconds
+11:02:18 [direct_rl_env.py] WARNING: DirectRLEnvCfg.num_states is deprecated. Use DirectRLEnvCfg.state_space instead.
+[INFO]: Completed setting up the environment...
+[UR5IKSolver] Utilizing Analytical/Numerical UR5 IK engine.
+[INFO] Wrapping environment for SKRL...
+[skrl:INFO] Environment wrapper: Isaac Lab (single-agent)
+[INFO] Starting SKRL Training Loop...
+  0%|                                    | 532/5000000 [00:24<63:22:05, 21.92it/s]
