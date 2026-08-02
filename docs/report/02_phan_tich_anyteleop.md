@@ -3,7 +3,9 @@
 > Nguồn: `docs/literature_review/AnyTeleop A General Vision-Based Dexterous Robot Arm-Hand Teleoperation System/AnyTeleop A General Vision-Based Dexterous Robot Arm-Hand Teleoperation System.md`
 > (Qin et al. 2023, RSS 2023, UCSD & NVIDIA). Project page: <https://yzqin.github.io/anyteleop/>
 >
-> **Trạng thái mã nguồn (kiểm tra 2026-08-02):** AnyTeleop **đã công bố mã nguồn chính thức** tại: <https://github.com/ShengjieMei/anyteleop>
+> **Trạng thái mã nguồn (kiểm tra 2026-08-02):** Hai thành phần lõi tạo nên AnyTeleop được phát triển độc lập và nguồn mở tại:
+> - **dex-retargeting (Thư viện ánh xạ ngón tay):** <https://github.com/dexsuite/dex-retargeting>
+> - **sim-web-visualizer (Bộ dựng hình đám mây):** <https://github.com/NVlabs/sim-web-visualizer>
 > Hệ thống này tương thích tốt với ROS 2, SAPIEN, Isaac Gym và hỗ trợ đa dạng cấu hình camera cùng nhiều loại tay robot khéo léo (Allegro, Shadow, Leap).
 >
 > → Ta sẽ sử dụng AnyTeleop làm **hệ quy chiếu Baseline học thuật** để đánh giá hiệu năng của bộ điều khiển CLIK kháng trễ và hệ thống DRL trở kháng mềm trong môi trường có độ trễ truyền thông lớn ($h_m = 32\,\text{ms}$).
@@ -34,7 +36,7 @@ Bài toán: Cung cấp một hệ thống điều khiển từ xa (teleoperation
 Hệ thống được chia thành **4 khối chức năng chính (Modular design)**:
 1.  **Hand Pose Detection:** Nhận dạng vị trí cổ tay và tọa độ 3D của các khớp ngón tay từ 1 hoặc nhiều nguồn camera.
 2.  **Detection Fusion:** Hợp nhất các đám mây điểm khớp ngón tay từ nhiều camera để giảm thiểu hiện tượng che khuất (occlusion).
-3.  **Hand Pose Retargeting:** Ánh xạ phi tuyến tối ưu hóa (optimization-based) tọa độ khớp tay người sang các góc khớp góc xoay của bàn tay robot khéo léo.
+3.  **Hand Pose Retargeting (Sử dụng `dex-retargeting`):** Ánh xạ phi tuyến tối ưu hóa (optimization-based) tọa độ khớp tay người sang các góc khớp góc xoay của bàn tay robot khéo léo.
 4.  **Motion Generation (cuRobo):** Nhận mục tiêu tọa độ Cartesian của bàn tay (gốc cổ tay) từ khối perception, sử dụng thư viện song song hóa cuRobo trên GPU để giải IK tránh va chạm ở tần số cao ($120\,\text{Hz}$).
 
 ---
@@ -44,7 +46,7 @@ Hệ thống được chia thành **4 khối chức năng chính (Modular design
 ### 2.1 Hand Pose Retargeting (Ánh xạ tối ưu hóa phi tuyến)
 AnyTeleop từ bỏ các tiếp cận học máy (learning-based retargeting) do khả năng khái quát hóa kém với robot mới. Thay vào đó, bài báo sử dụng phương pháp tối ưu hóa hình học phi tuyến thời gian thực:
 
-$$\min_{q_t} \sum_{i} \left\| \alpha \mathbf{v}_t^i - \mathbf{f}_i(q_t) \right\|^2 + \beta \left\| q_t - q_{t-1} \right\|^2$$
+$$\min_{q_t} \sum_{i} \left\| \alpha \mathbf{v}_t^i - \mathbf{f}_i(q_t) \right\| ^2 + \beta \left\| q_t - q_{t-1} \right\| ^2$$
 
 $$\text{s.t. } q_l \le q_t \le q_u$$
 
@@ -53,7 +55,7 @@ $$\text{s.t. } q_l \le q_t \le q_u$$
     *   $\mathbf{v}_t^i$: Vector tọa độ khóa (keypoint vector) của tay người được percieve.
     *   $\mathbf{f}_i(q_t)$: Động học thuận (Forward Kinematics - FK) tính toán vector tương đương trên bàn tay robot.
     *   $\alpha$: Hệ số tỷ lệ kích thước tay (scaling factor).
-    *   $\beta \left\| q_t - q_{t-1} \right\|^2$: Số hạng phạt (penalty term) để đảm bảo quỹ đạo chuyển động mượt mà theo thời gian, tránh giật khớp.
+    *   $\beta \left\| q_t - q_{t-1} \right\| ^2$: Số hạng phạt (penalty term) để đảm bảo quỹ đạo chuyển động mượt mà theo thời gian, tránh giật khớp.
     *   $q_l, q_u$: Giới hạn góc khớp vật lý của robot bàn tay.
 
 ### 2.2 Motion Generation & Tránh Va Chạm với cuRobo
@@ -68,6 +70,20 @@ $$\text{s.t. } q_l \le q_t \le q_u$$
 | Pose Retargeting | $25\,\text{Hz}$ | CPU | Giải bài toán tối ưu phi tuyến |
 | Motion Generation | $120\,\text{Hz}$ | GPU (cuRobo) | Chạy song song tránh va chạm |
 | Physical Execution | $120\,\text{Hz} - 500\,\text{Hz}$ | Robot Driver | Gửi torque/position target |
+
+### 2.4 Phân tích sâu 2 mã nguồn cốt lõi (Core Repositories Analysis)
+
+#### A. dex-retargeting (Thư viện ánh xạ ngón tay khéo léo)
+Thư viện `dex-retargeting` tách rời thuật toán ánh xạ hình học ra khỏi môi trường mô phỏng cụ thể, cho phép tính toán độc lập:
+*   **Trình tối ưu hóa đa dạng (Optimization Solvers):** Thư viện hỗ trợ cả trình tối ưu hóa phi tuyến **NLopt** (cho các bài toán ràng buộc phi tuyến phức tạp của ngón tay đối ngón) và bộ giải động học **Pinocchio** (tối ưu hóa tốc độ cao bằng cách tính ma trận Jacobian giải tích của bàn tay).
+*   **Cấu hình ánh xạ URDF trực quan:** Người dùng chỉ cần định nghĩa một file cấu hình YAML liên kết các khớp ngón tay người (đầu ra của MediaPipe gồm: `THUMB_TIP`, `INDEX_TIP`,...) với các liên kết đầu ngón tay tương ứng trong tệp URDF của robot.
+*   **Vector-based vs. Position-based:** Hỗ trợ ánh xạ theo hướng vector (hướng ngón tay) thay vì chỉ khoảng cách tuyệt đối, giúp giữ nguyên hình dáng nắm của tay người sang bàn tay robot có tỷ lệ hình học lệch nhau lớn.
+
+#### B. sim-web-visualizer (Bộ dựng hình đám mây qua Web)
+Bộ dựng hình `sim-web-visualizer` do NVIDIA phát triển giải quyết nút thắt cổ chai về hiển thị đồ họa trong teleoperation từ xa:
+*   **Mô hình Client-Server tách biệt:** Máy chủ giả lập vật lý (chạy GPU mạnh chứa Isaac/SAPIEN) và máy khách của người vận hành (chỉ cần trình duyệt Web hỗ trợ WebGL/Three.js) giao tiếp bất đồng bộ qua giao thức mạng hiệu năng cao.
+*   **Dữ liệu truyền tải tối giản:** Thay vì stream video chất lượng cao (ngốn băng thông và tăng độ trễ), visualizer này chỉ truyền dữ liệu chuyển động khớp (joint states) và tọa độ vị trí vật thể dưới dạng nén. Trình duyệt client sẽ tự render lại các đối tượng 3D cục bộ bằng WebGL.
+*   **Giảm thiểu trễ hiển thị:** Giúp người vận hành có thể điều khiển robot từ khoảng cách xa (qua mạng Internet thông thường) với phản hồi hình ảnh thời gian thực mượt mà mà không bị ảnh hưởng bởi độ trễ nén video.
 
 ---
 
