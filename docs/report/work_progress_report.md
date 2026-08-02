@@ -98,6 +98,10 @@ Báo cáo này lưu trữ chi tiết lịch sử thực hiện, các mốc thờ
 | 8 | Viết Code Thuật Toán Tuần 2 `src/sim/` | `2026-07-27T14:15:44+07:00` | **Hoàn thành** | [`src/sim/ekf_ball_tracker.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/ekf_ball_tracker.py), [`src/sim/curobo_ik_solver.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/curobo_ik_solver.py), [`src/sim/compliance_grasp_controller.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/compliance_grasp_controller.py), [`src/sim/run_dynamic_catching_sim.py`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/src/sim/run_dynamic_catching_sim.py) |
 | 9 | Source Code Tuần 2 Git Push (Commit `1c14db1`)| `2026-07-27T14:20:06+07:00` | **Hoàn thành** | Remote `main` branch |
 | 10 | Chạy Benchmark & Xuất File CSV (Commit `a09240e`) | `2026-07-27T15:28:26+07:00` | **Hoàn thành** | [`data/case1_case2_results.csv`](file:///home/nhglab/Baro/Human-Simulator-ur5dex/data/case1_case2_results.csv) (100% Success) |
+| 11 | Chuyển đổi môi trường sang Isaac Lab & Thiết lập DRL Pipeline | `2026-08-01T10:00:00+07:00` | **Hoàn thành** | `src/rl/residual_dh_hand_catch_env.py` |
+| 12 | Tinh chỉnh vị trí thả bóng bằng GUI tương tác (tâm lòng bàn tay) | `2026-08-01T10:45:00+07:00` | **Hoàn thành** | `docs/report/manual_home` |
+| 13 | Khắc phục lỗi hình học (tọa độ cổ tay vs lòng bàn tay) | `2026-08-01T18:00:00+07:00` | **Hoàn thành** | `src/rl/residual_dh_hand_catch_env.py` (v18) |
+| 14 | Sửa lỗi lực tương tác bạo lực (bat-effect) & độ trễ 30Hz | `2026-08-02T15:15:00+07:00` | **Hoàn thành** | `src/rl/residual_dh_hand_catch_env.py` (v20) |
 
 ---
-*Báo cáo được cập nhật tự động vào lúc 2026-07-27T15:28:26+07:00.*
+*Báo cáo được cập nhật tự động vào lúc 2026-08-02T15:20:00+07:00.*

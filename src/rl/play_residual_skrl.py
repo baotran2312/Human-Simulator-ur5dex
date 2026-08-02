@@ -114,7 +114,7 @@ def main():
                 action_space=env_wrapped.action_space,
                 device=env.device)
     
-    log_dir = "logs/skrl/residual_dh_hand_catch/PPO_Residual_v18"
+    log_dir = "logs/skrl/residual_dh_hand_catch/PPO_Residual_v20"
     latest_cp = get_latest_checkpoint(log_dir)
     if latest_cp:
         print(f"[INFO] Loading checkpoint: {latest_cp}")

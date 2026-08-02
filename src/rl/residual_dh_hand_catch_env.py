@@ -154,9 +154,9 @@ class DHHandCatchEnv(DirectRLEnv):
         palm_dist = torch.norm(ball_pos - palm_pos, dim=-1)
         
         # Shape: (num_envs, 1)
-        # Trigger distance 0.12m so fingers start closing exactly when ball reaches palm.
-        # Set target to 1.5 rad (forms a tight fist to hold the ball).
-        target_finger_joint_pos = torch.where(palm_dist.unsqueeze(-1) < 0.12, 1.5, 0.0)
+        # Trigger distance 0.20m so fingers form a cup right BEFORE the ball hits (compensating for 30Hz step dt).
+        # Set target to 0.9 rad (forms a nice cup shape to hold the ball without crushing it).
+        target_finger_joint_pos = torch.where(palm_dist.unsqueeze(-1) < 0.20, 0.9, 0.0)
         
         # 2. Micro Control (DRL Impedance)
         clipped_actions = torch.clamp(self.actions, min=-1.0, max=1.0)
@@ -233,7 +233,7 @@ class DHHandCatchEnv(DirectRLEnv):
         dense_reward = torch.exp(-palm_dist / 0.1)
         
         # Sparse drop penalty
-        dropped = (ball_pos[:, 2] < 0.2).float()
+        dropped = (ball_pos[:, 2] < 0.1).float()
         is_caught = (palm_dist < 0.12).float()
         
         w_f = 0.0001
@@ -244,10 +244,10 @@ class DHHandCatchEnv(DirectRLEnv):
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        # Died (dropped below 0.2m) or Time out
+        # Died (dropped below 0.1m) or Time out
         time_out = self.episode_length_buf >= self.max_episode_length
         ball_z = self.ball.data.root_pos_w[:, 2]
-        died = ball_z < 0.2
+        died = ball_z < 0.1
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor):
