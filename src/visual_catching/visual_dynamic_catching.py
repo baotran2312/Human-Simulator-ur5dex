@@ -30,6 +30,12 @@ args, _ = parser.parse_known_args()
 try:
     from isaacsim import SimulationApp
     simulation_app = SimulationApp({"headless": args.headless})
+    
+    if args.headless:
+        # Enable native WebRTC Livestream for Isaac Sim
+        from omni.isaac.core.utils.extensions import enable_extension
+        enable_extension("omni.kit.livestream.webrtc")
+        print("[VisualCatch] WebRTC Livestream enabled. Visit http://localhost:8211/streaming/webrtc-demo/ to view.")
 except ImportError:
     print("[ERROR] Could not import isaacsim SimulationApp. Please run inside env_isaacsim.")
     sys.exit(1)
@@ -81,19 +87,16 @@ class VisualDynamicCatchingRunner:
         if os.path.exists(self.usd_path):
             robot_prim = self.stage.DefinePrim(UR5DEXConfig.robot_prim_path, "Xform")
             robot_prim.GetReferences().AddReference(self.usd_path)
-            
-            UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
-            physx_articulation = PhysxSchema.PhysxArticulationAPI.Apply(robot_prim)
-            physx_articulation.CreateEnabledSelfCollisionsAttr().Set(False)
-            physx_articulation.CreateSolverPositionIterationCountAttr().Set(64)
-            physx_articulation.CreateSolverVelocityIterationCountAttr().Set(16)
+            # The ur5dex_collision.usd already has an ArticulationRoot defined.
             self._enable_robot_collisions(robot_prim)
             print(f"[VisualCatch] Loaded UR5DEX robot asset: {self.usd_path}")
 
         # Spawn Ball
         sphere_geom = UsdGeom.Sphere.Define(self.stage, Sdf.Path(self.ball_prim_path))
         sphere_geom.GetRadiusAttr().Set(0.035)
-        sphere_geom.AddTranslateOp().Set(Gf.Vec3f(0.85, 0.11, 1.2))
+        xformable = UsdGeom.Xformable(sphere_geom)
+        xformable.ClearXformOpOrder()
+        xformable.AddTranslateOp().Set(Gf.Vec3d(0.85, 0.11, 1.2))
         sphere_geom.GetDisplayColorAttr().Set([Gf.Vec3f(0.1, 0.9, 0.2)]) # Beautiful lime green ball
 
         UsdPhysics.RigidBodyAPI.Apply(sphere_geom.GetPrim())
@@ -115,22 +118,23 @@ class VisualDynamicCatchingRunner:
     def reset_ball(self):
         ball_prim = self.stage.GetPrimAtPath(self.ball_prim_path)
         # Random initial position within workspace
-        x = np.random.uniform(0.75, 0.88)
+        x = np.random.uniform(0.50, 0.60)
         y = np.random.uniform(0.05, 0.15)
-        z = 1.3
+        z = 2.0
         
         # Apply reset pose
-        xform = UsdGeom.XformCommonAPI(ball_prim)
-        xform.SetTranslate(Gf.Vec3d(x, y, z))
+        xformable = UsdGeom.Xformable(ball_prim)
+        xformable.ClearXformOpOrder()
+        xformable.AddTranslateOp().Set(Gf.Vec3d(x, y, z))
         
-        # Reset velocity to drop down + slight throw
+        # Reset velocity to drop down
         rigid_body = UsdPhysics.RigidBodyAPI(ball_prim)
-        rigid_body.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, -1.5))
+        rigid_body.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
         rigid_body.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
 
     def apply_arm_joint_targets(self, q_arm: np.ndarray):
         for i, joint_name in enumerate(self.ARM_JOINT_NAMES):
-            joint_path = f"{UR5DEXConfig.robot_prim_path}/{joint_name}"
+            joint_path = f"{UR5DEXConfig.robot_prim_path}/ur5/joints/{joint_name}"
             prim = self.stage.GetPrimAtPath(joint_path)
             if prim.IsValid():
                 drive_api = UsdPhysics.DriveAPI.Get(prim, "angular")
@@ -161,7 +165,7 @@ class VisualDynamicCatchingRunner:
         }
 
         for joint_name in finger_joints:
-            joint_path = f"{UR5DEXConfig.robot_prim_path}/{joint_name}"
+            joint_path = f"{UR5DEXConfig.robot_prim_path}/DexterousHandBase/joints/{joint_name}"
             prim = self.stage.GetPrimAtPath(joint_path)
             if prim.IsValid():
                 drive_api = UsdPhysics.DriveAPI.Get(prim, "angular")
@@ -171,12 +175,14 @@ class VisualDynamicCatchingRunner:
                 drive_api.GetTargetPositionAttr().Set(float(val))
                 drive_api.GetStiffnessAttr().Set(100.0)
                 drive_api.GetDampingAttr().Set(10.0)
+            else:
+                print(f"[ERROR] Invalid joint prim path: {joint_path}")
 
     def get_ball_position(self) -> np.ndarray:
         ball_prim = self.stage.GetPrimAtPath(self.ball_prim_path)
-        xform = UsdGeom.XformCommonAPI(ball_prim)
-        trans, _, _, _, _ = xform.GetXformVectors(0)
-        return np.array(trans)
+        xform = UsdGeom.Xformable(ball_prim)
+        world_transform = xform.ComputeLocalToWorldTransform(0)
+        return np.array(world_transform.ExtractTranslation())
 
     def run_sim(self, num_trials: int):
         timeline = omni.timeline.get_timeline_interface()
@@ -196,9 +202,9 @@ class VisualDynamicCatchingRunner:
             
             trial_running = True
             step = 0
-            start_time = time.time()
+            min_dist = float('inf')
             
-            while trial_running and (time.time() - start_time < 3.0):
+            while trial_running and step < 400:
                 simulation_app.update()
                 
                 # Fetch positions
@@ -211,21 +217,24 @@ class VisualDynamicCatchingRunner:
                 # Run cuRobo solver to align arm's palm to block ball velocity
                 if step % 2 == 0:
                     # Target palm pos is p_int, oriented to face the ball
-                    q_arm_sol, success = self.ik_solver.solve_ik(p_int, np.array([0.0, 0.0, -1.5]))
-                    if success:
-                        q_arm = q_arm_sol
+                    q_arm_sol, _ = self.ik_solver.solve_ik(p_int, np.array([0.0, 0.0, -1.5]), q_current=q_arm)
+                    q_arm = q_arm_sol
                 
                 # Get current time for finger interpolation
                 current_time = step * (1.0/60.0)
                 
-                # Calculate distance between EKF-predicted palm and ball
-                # True palm is offset from wrist
-                q_deg = np.degrees(q_arm)
-                dist_to_palm = np.linalg.norm(ball_pos - p_int)
+                # Get true palm position using forward kinematics of current arm state
+                wrist_pos, wrist_rot = self.ik_solver._forward_kinematics(q_arm)
+                tcp_offset_local = np.array([0.0, 0.0, 0.33])
+                palm_pos = wrist_pos + wrist_rot @ tcp_offset_local
                 
-                # Trigger soft closing when ball is within 18cm of predicted palm center
-                # This compensates for time latency and creates a smooth deceleration curve
-                if dist_to_palm < 0.18:
+                dist_to_palm = np.linalg.norm(ball_pos - palm_pos)
+                if dist_to_palm < min_dist:
+                    min_dist = dist_to_palm
+                
+                # Trigger soft closing proactively when ball is estimated to arrive in < 0.25s
+                # or if it physically enters a 35cm radius.
+                if t_catch < 0.25 or dist_to_palm < 0.35:
                     self.finger_interpolator.trigger_closing(torch.tensor([0], device="cuda:0"), current_time)
                 
                 # Apply arm and smooth finger joint targets
@@ -235,16 +244,26 @@ class VisualDynamicCatchingRunner:
                 
                 # Terminate trial if ball drops below threshold (missed) or successful hold
                 if ball_pos[2] < 0.2:
-                    print("[TRIAL] Ball dropped - Missed.")
+                    print(f"[TRIAL] Ball dropped - Missed. Min dist: {min_dist:.3f}m")
+                    with open("/tmp/catch_result.txt", "w") as f:
+                        f.write(f"MISSED: Min dist {min_dist:.3f}m")
                     trial_running = False
                 elif dist_to_palm < 0.07 and ball_pos[2] < 0.7:
                     # Ball is resting statically in the hand
                     print(f"[TRIAL] Success! Caught ball cleanly. Dist: {dist_to_palm:.3f}m")
+                    with open("/tmp/catch_result.txt", "w") as f:
+                        f.write(f"SUCCESS: Dist {dist_to_palm:.3f}m")
                     time.sleep(0.5) # Hold pose for visualization appeal
                     trial_running = False
                 
                 step += 1
+            
+            if trial_running:
+                print(f"[TRIAL] Time out - Missed. Min dist: {min_dist:.3f}m")
+                with open("/tmp/catch_result.txt", "w") as f:
+                    f.write(f"TIMEOUT: Min dist {min_dist:.3f}m")
                 
+        print("\n[VisualCatch] Simulation loop finished.")
         timeline.stop()
         simulation_app.close()
 

@@ -50,36 +50,30 @@ class UR5IKSolver:
         else:
             print("[UR5IKSolver] Utilizing Analytical/Numerical UR5 IK engine.")
 
-    def compute_palm_orientation(self, ball_vel: np.ndarray) -> np.ndarray:
+    def compute_palm_orientation(self, ball_velocity: np.ndarray) -> np.ndarray:
         """
-        Computes 3x3 Rotation matrix to orient hand palm facing AGAINST incoming ball velocity.
+        Computes the target orientation for the wrist so that the Dexterous Hand's palm faces UP.
+        For this specific hand:
+        - Local Z-axis = Direction the fingers extend.
+        - Local Y-axis = Palm normal (faces out from the inner hand).
+        - Local X-axis = Thumb direction.
+        
+        To catch a ball falling from above:
+        - Palm (local Y) must point UP [0, 0, 1].
+        - Fingers (local Z) should point horizontally away from the robot [1, 0, 0].
         """
-        v = np.array(ball_vel, dtype=float)
-        v_norm = np.linalg.norm(v)
-        if v_norm < 1e-5:
-            approach_dir = np.array([-1.0, 0.0, 0.0])
-        else:
-            approach_dir = -v / v_norm # Palm faces opposite to ball movement
-
-        # Build orthonormal basis [x_hand, y_hand, z_hand]
-        z_hand = approach_dir
-        up = np.array([0.0, 0.0, 1.0])
-        if abs(np.dot(z_hand, up)) > 0.95:
-            up = np.array([0.0, 1.0, 0.0])
-
-        x_hand = np.cross(up, z_hand)
-        x_hand /= np.linalg.norm(x_hand)
-        y_hand = np.cross(z_hand, x_hand)
-
+        # Palm faces UP
+        y_hand = np.array([0.0, 0.0, 1.0])
+        
+        # Fingers point horizontally forward (+X)
+        z_hand = np.array([1.0, 0.0, 0.0])
+        
+        # X-axis completes the orthonormal basis
+        x_hand = np.cross(y_hand, z_hand)
+        
         R_base = np.column_stack([x_hand, y_hand, z_hand])
-
-        # 180 degree rotation around local Y-axis to align inner palm face towards ball (instead of back of hand)
-        R_flip = np.array([
-            [-1.0,  0.0,  0.0],
-            [ 0.0,  1.0,  0.0],
-            [ 0.0,  0.0, -1.0]
-        ])
-        return R_base @ R_flip
+        
+        return R_base
 
     def solve_ik(self, target_pos: np.ndarray, ball_vel: np.ndarray, 
                  q_current: Optional[np.ndarray] = None) -> Tuple[np.ndarray, bool]:
@@ -95,6 +89,9 @@ class UR5IKSolver:
         q = q_curr.copy()
         max_iters = 80
         tol = 5e-3
+        
+        best_q = q.copy()
+        best_pos_err = float('inf')
 
         for _ in range(max_iters):
             pos_curr, R_curr = self._forward_kinematics(q)
@@ -133,14 +130,25 @@ class UR5IKSolver:
             J_damped = J_tcp.T @ np.linalg.inv(J_tcp @ J_tcp.T + (lam ** 2) * np.eye(6))
             
             # Adaptive gain: smaller steps for rotation to ensure stability
-            gain = np.array([0.5, 0.5, 0.5, 0.2, 0.2, 0.2])
+            gain = np.array([1.0, 1.0, 1.0, 0.02, 0.02, 0.02])
             dx = err_vec * gain
             
             dq = J_damped @ dx
             q = q + dq
             q = np.clip(q, self.JOINT_LIMITS[:, 0], self.JOINT_LIMITS[:, 1])
 
-        return q, True
+            # Keep track of the best solution in terms of position error
+            curr_pos_err_norm = np.linalg.norm(pos_err)
+            if curr_pos_err_norm < best_pos_err:
+                best_pos_err = curr_pos_err_norm
+                best_q = q.copy()
+
+        # Accept if position error is within a tight bound (e.g. < 10cm)
+        if best_pos_err < 0.1:
+            return best_q, True
+        else:
+            # Return the closest we got
+            return best_q, False
 
     def _forward_kinematics(self, q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Computes end-effector TCP position and rotation matrix for UR5."""

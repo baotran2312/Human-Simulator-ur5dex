@@ -25,17 +25,17 @@ class SmoothFingerInterpolator:
         # Fingers close sequentially, with the thumb wrapping around to lock the object.
         # Target angles (in radians) to form a perfect holding cup.
         self.grasp_targets = {
-            "thumb": [0.6, 0.8, 0.8],
-            "index": [0.8, 0.9, 0.9, 0.7],
-            "middle": [0.85, 0.95, 0.95, 0.7],
-            "ring": [0.85, 0.95, 0.95, 0.7],
-            "pinky": [0.8, 0.9, 0.9, 0.7],
+            "thumb": [1.0, 1.2, 1.2],
+            "index": [1.2, 1.5, 1.5, 1.2],
+            "middle": [1.3, 1.6, 1.6, 1.2],
+            "ring": [1.3, 1.6, 1.6, 1.2],
+            "pinky": [1.2, 1.5, 1.5, 1.2],
         }
         
         # State tracking for interpolation: time since trigger started
         self.t_started = torch.zeros(self.num_envs, device=self.device)
         self.is_closing = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
-        self.duration = 0.4 # Duration in seconds for a silky-smooth capture
+        self.duration = 0.15 # Duration in seconds for a fast, silky-smooth capture
         
     def reset_envs(self, env_ids: torch.Tensor):
         """Resets the interpolation timers for specific environment IDs."""
